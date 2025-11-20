@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       // Get all candidates with their vote counts
       const candidates = await prisma.candidate.findMany({
         include: {
+          position: true,
           _count: {
             select: { votes: true },
           },
@@ -36,13 +37,23 @@ export async function GET(request: NextRequest) {
         ],
       })
 
-      // Group results by council
+      // Group results by council and position
       const resultsByCouncil: Record<string, any> = {}
 
       candidates.forEach((candidate) => {
         if (!resultsByCouncil[candidate.council]) {
           resultsByCouncil[candidate.council] = {
             council: candidate.council,
+            positions: {},
+            totalVotes: 0,
+          }
+        }
+
+        const positionName = candidate.position.name
+
+        if (!resultsByCouncil[candidate.council].positions[positionName]) {
+          resultsByCouncil[candidate.council].positions[positionName] = {
+            name: positionName,
             candidates: [],
             totalVotes: 0,
           }
@@ -50,7 +61,7 @@ export async function GET(request: NextRequest) {
 
         const voteCount = candidate._count.votes
 
-        resultsByCouncil[candidate.council].candidates.push({
+        resultsByCouncil[candidate.council].positions[positionName].candidates.push({
           id: candidate.id,
           name: candidate.name,
           bio: candidate.bio,
@@ -60,19 +71,22 @@ export async function GET(request: NextRequest) {
           percentage: 0, // Will calculate after
         })
 
+        resultsByCouncil[candidate.council].positions[positionName].totalVotes += voteCount
         resultsByCouncil[candidate.council].totalVotes += voteCount
       })
 
-      // Calculate percentages
+      // Calculate percentages and sort
       Object.values(resultsByCouncil).forEach((council: any) => {
-        council.candidates.forEach((candidate: any) => {
-          if (council.totalVotes > 0) {
-            candidate.percentage = (candidate.voteCount / council.totalVotes) * 100
-          }
-        })
+        Object.values(council.positions).forEach((position: any) => {
+          position.candidates.forEach((candidate: any) => {
+            if (position.totalVotes > 0) {
+              candidate.percentage = (candidate.voteCount / position.totalVotes) * 100
+            }
+          })
 
-        // Sort by vote count descending
-        council.candidates.sort((a: any, b: any) => b.voteCount - a.voteCount)
+          // Sort by vote count descending
+          position.candidates.sort((a: any, b: any) => b.voteCount - a.voteCount)
+        })
       })
 
       // Get voting timeline (votes per hour)

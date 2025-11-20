@@ -11,7 +11,7 @@ export async function PUT(
     try {
       const { id } = params
       const body = await request.json()
-      const { name, council, bio, photoUrl, status } = body
+      const { name, positionId, council, bio, photoUrl, status } = body
 
       // Check if candidate exists
       const existing = await prisma.candidate.findUnique({
@@ -27,7 +27,7 @@ export async function PUT(
 
       // Validate council if provided
       if (council) {
-        const validCouncils = ['vigilancia', 'administracion', 'educacion']
+        const validCouncils = ['vigilancia', 'administracion', 'credito']
         if (!validCouncils.includes(council)) {
           return NextResponse.json(
             { error: 'Consejo no válido' },
@@ -47,9 +47,24 @@ export async function PUT(
         }
       }
 
+      // Verify position if provided
+      if (positionId) {
+        const position = await prisma.position.findUnique({
+          where: { id: positionId },
+        })
+
+        if (!position) {
+          return NextResponse.json(
+            { error: 'Posición no encontrada' },
+            { status: 404 }
+          )
+        }
+      }
+
       // Build update data
       const updateData: any = {}
       if (name !== undefined) updateData.name = name
+      if (positionId !== undefined) updateData.positionId = positionId
       if (council !== undefined) updateData.council = council
       if (bio !== undefined) updateData.bio = bio
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl
@@ -59,6 +74,9 @@ export async function PUT(
       const candidate = await prisma.candidate.update({
         where: { id },
         data: updateData,
+        include: {
+          position: true,
+        },
       })
 
       // Log activity
