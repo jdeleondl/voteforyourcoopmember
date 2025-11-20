@@ -11,11 +11,14 @@ export async function PUT(
     try {
       const { id } = params
       const body = await request.json()
-      const { name, positionId, council, bio, photoUrl, status } = body
+      const { bio, photoUrl, status } = body
 
       // Check if candidate exists
       const existing = await prisma.candidate.findUnique({
         where: { id },
+        include: {
+          member: true,
+        },
       })
 
       if (!existing) {
@@ -23,17 +26,6 @@ export async function PUT(
           { error: 'Candidato no encontrado' },
           { status: 404 }
         )
-      }
-
-      // Validate council if provided
-      if (council) {
-        const validCouncils = ['vigilancia', 'administracion', 'credito']
-        if (!validCouncils.includes(council)) {
-          return NextResponse.json(
-            { error: 'Consejo no válido' },
-            { status: 400 }
-          )
-        }
       }
 
       // Validate status if provided
@@ -47,25 +39,8 @@ export async function PUT(
         }
       }
 
-      // Verify position if provided
-      if (positionId) {
-        const position = await prisma.position.findUnique({
-          where: { id: positionId },
-        })
-
-        if (!position) {
-          return NextResponse.json(
-            { error: 'Posición no encontrada' },
-            { status: 404 }
-          )
-        }
-      }
-
-      // Build update data
+      // Build update data (can only update bio, photoUrl, status)
       const updateData: any = {}
-      if (name !== undefined) updateData.name = name
-      if (positionId !== undefined) updateData.positionId = positionId
-      if (council !== undefined) updateData.council = council
       if (bio !== undefined) updateData.bio = bio
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl
       if (status !== undefined) updateData.status = status
@@ -75,7 +50,7 @@ export async function PUT(
         where: { id },
         data: updateData,
         include: {
-          position: true,
+          member: true,
         },
       })
 
@@ -86,7 +61,7 @@ export async function PUT(
         'candidate',
         id,
         {
-          name: candidate.name,
+          memberName: candidate.member.name,
           changes: updateData,
         },
         request
@@ -115,6 +90,7 @@ export async function DELETE(
       const candidate = await prisma.candidate.findUnique({
         where: { id },
         include: {
+          member: true,
           _count: {
             select: { votes: true },
           },
@@ -147,7 +123,7 @@ export async function DELETE(
         'delete_candidate',
         'candidate',
         id,
-        { name: candidate.name, council: candidate.council },
+        { memberName: candidate.member.name, council: candidate.council },
         request
       )
 
