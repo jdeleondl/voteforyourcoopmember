@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Esquema actualizado con funcionalidades de administración
 
 generator client {
   provider = "prisma-client-js"
@@ -42,16 +41,15 @@ model Member {
 
 // Registro de asistencia
 model Attendance {
-  id               String   @id @default(uuid())
-  memberId         String   @unique
-  member           Member   @relation(fields: [memberId], references: [id])
-  code             String   @unique
-  confirmedAt      DateTime @default(now())
-  emailSent        Boolean  @default(false)
-  emailSentAt      DateTime?
-  status           String   @default("active") // active, cancelled, regenerated
-  regeneratedCount Int      @default(0)
-  updatedAt        DateTime @updatedAt
+  id           String   @id @default(uuid())
+  memberId     String   @unique
+  member       Member   @relation(fields: [memberId], references: [id])
+  code         String   @unique
+  confirmedAt  DateTime @default(now())
+  emailSent    Boolean  @default(false)
+  emailSentAt  DateTime?
+  status       String   @default("active") // active, cancelled, regenerated
+  regeneratedCount Int   @default(0)
 }
 
 // Candidatos para cada cargo
@@ -84,13 +82,13 @@ model Vote {
 
 // Configuración del sistema
 model Config {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  value       String
-  description String?
-  category    String   @default("general") // general, email, database, voting
-  updatedAt   DateTime @updatedAt
-  updatedBy   String?
+  id                  String   @id @default(uuid())
+  key                 String   @unique
+  value               String
+  description         String?
+  category            String   @default("general") // general, email, database, voting
+  updatedAt           DateTime @updatedAt
+  updatedBy           String?
 }
 
 // Logs de actividad
