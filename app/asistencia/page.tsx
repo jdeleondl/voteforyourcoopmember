@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
 interface Member {
@@ -13,43 +13,71 @@ interface Member {
 
 export default function AsistenciaPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchResults, setSearchResults] = useState<Member[]>([])
+  const [suggestions, setSuggestions] = useState<Member[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      setError('Por favor ingrese un nombre o cédula para buscar')
-      return
+  // Búsqueda en tiempo real con debounce
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      if (searchTerm.trim().length >= 2) {
+        searchMembers(searchTerm)
+      } else {
+        setSuggestions([])
+        setShowSuggestions(false)
+      }
+    }, 300) // Espera 300ms después de que el usuario deja de escribir
+
+    return () => clearTimeout(delaySearch)
+  }, [searchTerm])
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
     }
 
-    setLoading(true)
-    setError(null)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
+  const searchMembers = async (query: string) => {
     try {
-      const response = await fetch(`/api/members/search?q=${encodeURIComponent(searchTerm)}`)
+      const response = await fetch(`/api/members/search?q=${encodeURIComponent(query)}`)
       const data = await response.json()
 
       if (data.error) {
-        setError(data.error)
-        setSearchResults([])
+        setSuggestions([])
       } else {
-        setSearchResults(data.members || [])
-        if (data.members.length === 0) {
-          setError('No se encontraron miembros con ese nombre o cédula')
-        }
+        setSuggestions(data.members || [])
+        setShowSuggestions(true)
       }
     } catch (err) {
-      setError('Error al buscar miembro. Por favor intente nuevamente.')
-    } finally {
-      setLoading(false)
+      console.error('Error searching members:', err)
+      setSuggestions([])
     }
   }
 
-  const handleConfirmAttendance = async (member: Member) => {
-    if (member.hasConfirmed) {
+  const handleSelectMember = (member: Member) => {
+    setSearchTerm(member.name)
+    setSelectedMember(member)
+    setShowSuggestions(false)
+    setSuggestions([])
+  }
+
+  const handleConfirmAttendance = async () => {
+    if (!selectedMember) {
+      setError('Por favor selecciona un miembro de la lista')
+      return
+    }
+
+    if (selectedMember.hasConfirmed) {
       setError('Este miembro ya confirmó su asistencia')
       return
     }
@@ -63,7 +91,7 @@ export default function AsistenciaPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ memberId: member.id }),
+        body: JSON.stringify({ memberId: selectedMember.id }),
       })
 
       const data = await response.json()
@@ -72,9 +100,6 @@ export default function AsistenciaPage() {
         setError(data.error)
       } else {
         setConfirmationCode(data.code)
-        setSelectedMember(member)
-        setSearchResults([])
-        setSearchTerm('')
       }
     } catch (err) {
       setError('Error al confirmar asistencia. Por favor intente nuevamente.')
@@ -88,6 +113,12 @@ export default function AsistenciaPage() {
       navigator.clipboard.writeText(confirmationCode)
       alert('Código copiado al portapapeles')
     }
+  }
+
+  const handleInputChange = (value: string) => {
+    setSearchTerm(value)
+    setSelectedMember(null)
+    setError(null)
   }
 
   if (confirmationCode && selectedMember) {
@@ -195,30 +226,143 @@ export default function AsistenciaPage() {
             </p>
           </div>
 
-          {/* Buscador */}
-          <div className="mb-6">
+          {/* Buscador con Autocompletado */}
+          <div className="mb-6" ref={searchRef}>
             <label className="block text-gray-700 font-bold mb-2">
               Buscar por Nombre o Cédula
             </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Ej: Juan Pérez o 001-1234567-8"
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none text-gray-800"
-                disabled={loading}
-              />
+            <div className="relative">
+              <div className="flex items-center">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onFocus={() => {
+                      if (suggestions.length > 0) {
+                        setShowSuggestions(true)
+                      }
+                    }}
+                    placeholder="Escribe tu nombre o cédula..."
+                    className="w-full px-4 py-3 pr-10 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none text-gray-800"
+                    disabled={loading}
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dropdown de Sugerencias */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-indigo-300 rounded-lg shadow-xl max-h-96 overflow-y-auto">
+                  <div className="p-2">
+                    <p className="text-xs text-gray-500 px-3 py-2 font-semibold uppercase">
+                      {suggestions.length} {suggestions.length === 1 ? 'resultado' : 'resultados'} encontrado{suggestions.length === 1 ? '' : 's'}
+                    </p>
+                    {suggestions.map((member) => (
+                      <div
+                        key={member.id}
+                        onClick={() => handleSelectMember(member)}
+                        className="px-4 py-3 hover:bg-indigo-50 cursor-pointer rounded-lg transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-800">{member.name}</p>
+                            <p className="text-sm text-gray-600">Cédula: {member.cedula}</p>
+                            <p className="text-xs text-gray-500">{member.email}</p>
+                          </div>
+                          <div>
+                            {member.hasConfirmed ? (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-600">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Ya confirmó
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                Disponible
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mensaje cuando no hay resultados */}
+              {showSuggestions && searchTerm.length >= 2 && suggestions.length === 0 && (
+                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-xl p-4">
+                  <div className="text-center text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <p className="font-semibold">No se encontraron resultados</p>
+                    <p className="text-sm">Intenta con otro nombre o cédula</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Ayuda de búsqueda */}
+            <p className="text-sm text-gray-500 mt-2">
+              💡 Escribe al menos 2 caracteres para ver sugerencias
+            </p>
+          </div>
+
+          {/* Miembro Seleccionado */}
+          {selectedMember && (
+            <div className="mb-6 p-4 bg-indigo-50 border-2 border-indigo-300 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-indigo-600 font-semibold">Miembro Seleccionado:</p>
+                  <p className="text-xl font-bold text-indigo-900">{selectedMember.name}</p>
+                  <p className="text-sm text-gray-600">Cédula: {selectedMember.cedula}</p>
+                  <p className="text-sm text-gray-600">{selectedMember.email}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedMember(null)
+                    setSearchTerm('')
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
               <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleConfirmAttendance}
+                disabled={loading || selectedMember.hasConfirmed}
+                className={`w-full py-4 rounded-lg font-bold transition-colors ${
+                  selectedMember.hasConfirmed
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-green-500 hover:bg-green-600 text-white'
+                }`}
               >
-                {loading ? 'Buscando...' : 'Buscar'}
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Confirmando...
+                  </span>
+                ) : selectedMember.hasConfirmed ? (
+                  'Este miembro ya confirmó su asistencia'
+                ) : (
+                  'Confirmar Mi Presencia'
+                )}
               </button>
             </div>
-          </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -229,42 +373,6 @@ export default function AsistenciaPage() {
                 </svg>
                 {error}
               </p>
-            </div>
-          )}
-
-          {/* Resultados */}
-          {searchResults.length > 0 && (
-            <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Resultados de la búsqueda ({searchResults.length})
-              </h2>
-              <div className="space-y-3">
-                {searchResults.map((member) => (
-                  <div
-                    key={member.id}
-                    className="border-2 border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-800">{member.name}</h3>
-                        <p className="text-gray-600">Cédula: {member.cedula}</p>
-                        <p className="text-gray-600 text-sm">{member.email}</p>
-                      </div>
-                      <button
-                        onClick={() => handleConfirmAttendance(member)}
-                        disabled={loading || member.hasConfirmed}
-                        className={`px-6 py-3 rounded-lg font-bold transition-colors ${
-                          member.hasConfirmed
-                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                            : 'bg-green-500 hover:bg-green-600 text-white'
-                        }`}
-                      >
-                        {member.hasConfirmed ? 'Ya Confirmado' : 'Confirmar Presente'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
@@ -280,18 +388,22 @@ export default function AsistenciaPage() {
           <ol className="space-y-2 text-gray-700">
             <li className="flex items-start gap-2">
               <span className="font-bold text-indigo-600">1.</span>
-              <span>Busca tu nombre o cédula en el buscador</span>
+              <span>Escribe tu nombre o cédula en el buscador</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-indigo-600">2.</span>
-              <span>Presiona el botón "Confirmar Presente"</span>
+              <span>Selecciona tu nombre del desplegable que aparece</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-indigo-600">3.</span>
-              <span>Recibirás un código único para votar</span>
+              <span>Presiona el botón "Confirmar Mi Presencia"</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-indigo-600">4.</span>
+              <span>Recibirás un código único para votar</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-indigo-600">5.</span>
               <span>Usa ese código en la página de votación</span>
             </li>
           </ol>
