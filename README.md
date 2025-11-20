@@ -46,6 +46,11 @@ Sistema completo de confirmación de asistencia y votación electrónica para la
 
 ## 🔧 Instalación
 
+> **⚠️ ¿Tienes el error "Error al buscar miembros"?**
+> Lee la [**Guía de Instalación Completa (INSTALACION.md)**](INSTALACION.md) con soluciones paso a paso.
+
+### Instalación Rápida
+
 1. **Clonar el repositorio** (o ya estás en él)
 
 2. **Instalar dependencias**:
