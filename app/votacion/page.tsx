@@ -36,9 +36,8 @@ export default function VotacionPage() {
         setError(data.error)
         setLoading(false)
       } else if (data.valid) {
-        // Guardar el código en sessionStorage y redirigir a selección
-        sessionStorage.setItem('votingCode', code.trim().toUpperCase())
-        router.push('/votacion/seleccionar')
+        // Redirigir directamente a la nueva página de votación
+        router.push(`/votar?code=${code.trim().toUpperCase()}`)
       }
     } catch (err) {
       setError('Error al validar el código. Por favor intente nuevamente.')
