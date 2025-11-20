@@ -54,17 +54,35 @@ model Attendance {
   updatedAt        DateTime @updatedAt
 }
 
+// Cargos disponibles por consejo
+model Position {
+  id              String    @id @default(uuid())
+  name            String    // "Presidente", "Secretario", etc.
+  council         String    // "administracion", "vigilancia", "credito"
+  order           Int       // Orden de visualización
+  isOccupied      Boolean   @default(false)
+  currentHolder   String?   // Nombre del ocupante actual
+  termEndDate     DateTime? // Fecha en que termina el período actual
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  candidates      Candidate[]
+
+  @@unique([name, council])
+}
+
 // Candidatos para cada cargo
 model Candidate {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  position    String   // Cargo: "presidente", "vicepresidente", etc.
-  council     String   // Consejo: "administracion", "vigilancia", "credito"
+  positionId  String
+  position    Position  @relation(fields: [positionId], references: [id])
+  council     String    // Consejo: "administracion", "vigilancia", "credito"
   bio         String?
   photoUrl    String?
-  status      String   @default("active") // active, inactive
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String    @default("active") // active, inactive
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   votes       Vote[]
 }

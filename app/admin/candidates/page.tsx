@@ -2,9 +2,21 @@
 
 import { useEffect, useState } from 'react'
 
+interface Position {
+  id: string
+  name: string
+  council: string
+  order: number
+  isOccupied: boolean
+  currentHolder: string | null
+  termEndDate: string | null
+}
+
 interface Candidate {
   id: string
   name: string
+  positionId: string
+  position: Position
   council: string
   bio: string
   photoUrl: string | null
@@ -16,6 +28,7 @@ interface Candidate {
 
 export default function CandidatesPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCouncil, setFilterCouncil] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -23,7 +36,8 @@ export default function CandidatesPage() {
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
   const [formData, setFormData] = useState({
     name: '',
-    council: 'vigilancia',
+    positionId: '',
+    council: 'administracion',
     bio: '',
     photoUrl: '',
   })
@@ -31,6 +45,7 @@ export default function CandidatesPage() {
 
   useEffect(() => {
     fetchCandidates()
+    fetchPositions()
   }, [filterCouncil, filterStatus])
 
   const fetchCandidates = async () => {
@@ -49,11 +64,26 @@ export default function CandidatesPage() {
     }
   }
 
+  const fetchPositions = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filterCouncil) params.append('council', filterCouncil)
+      params.append('availableOnly', 'true')
+
+      const response = await fetch(`/api/admin/positions?${params}`)
+      const data = await response.json()
+      setPositions(data.positions || [])
+    } catch (error) {
+      console.error('Error fetching positions:', error)
+    }
+  }
+
   const handleOpenModal = (candidate?: Candidate) => {
     if (candidate) {
       setEditingCandidate(candidate)
       setFormData({
         name: candidate.name,
+        positionId: candidate.positionId,
         council: candidate.council,
         bio: candidate.bio,
         photoUrl: candidate.photoUrl || '',
@@ -62,7 +92,8 @@ export default function CandidatesPage() {
       setEditingCandidate(null)
       setFormData({
         name: '',
-        council: 'vigilancia',
+        positionId: '',
+        council: 'administracion',
         bio: '',
         photoUrl: '',
       })
@@ -75,10 +106,19 @@ export default function CandidatesPage() {
     setEditingCandidate(null)
     setFormData({
       name: '',
-      council: 'vigilancia',
+      positionId: '',
+      council: 'administracion',
       bio: '',
       photoUrl: '',
     })
+  }
+
+  const handleCouncilChange = (council: string) => {
+    setFormData({ ...formData, council, positionId: '' })
+    // Fetch positions for the selected council
+    fetch(`/api/admin/positions?council=${council}&availableOnly=true`)
+      .then(res => res.json())
+      .then(data => setPositions(data.positions || []))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,7 +214,7 @@ export default function CandidatesPage() {
     const labels: Record<string, string> = {
       vigilancia: 'Consejo de Vigilancia',
       administracion: 'Consejo de Administración',
-      educacion: 'Consejo de Educación',
+      credito: 'Comité de Crédito',
     }
     return labels[council] || council
   }
@@ -183,7 +223,7 @@ export default function CandidatesPage() {
     const colors: Record<string, string> = {
       vigilancia: 'bg-blue-100 text-blue-800',
       administracion: 'bg-purple-100 text-purple-800',
-      educacion: 'bg-green-100 text-green-800',
+      credito: 'bg-green-100 text-green-800',
     }
     return colors[council] || 'bg-gray-100 text-gray-800'
   }
@@ -200,6 +240,8 @@ export default function CandidatesPage() {
     return acc
   }, {} as Record<string, { total: number; active: number; votes: number }>)
 
+  const availablePositionsForCouncil = positions.filter(p => p.council === formData.council)
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -214,7 +256,7 @@ export default function CandidatesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Candidatos</h1>
-          <p className="text-gray-600">Administra los candidatos para los diferentes consejos</p>
+          <p className="text-gray-600">Administra los candidatos para los diferentes cargos</p>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -254,7 +296,7 @@ export default function CandidatesPage() {
               <option value="">Todos los consejos</option>
               <option value="vigilancia">Vigilancia</option>
               <option value="administracion">Administración</option>
-              <option value="educacion">Educación</option>
+              <option value="credito">Crédito</option>
             </select>
           </div>
 
@@ -305,9 +347,17 @@ export default function CandidatesPage() {
                 </span>
               </div>
 
-              <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full mb-3 ${getCouncilColor(candidate.council)}`}>
-                {getCouncilLabel(candidate.council)}
-              </span>
+              <div className="mb-2">
+                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getCouncilColor(candidate.council)}`}>
+                  {getCouncilLabel(candidate.council)}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-sm font-medium text-gray-700">
+                  {candidate.position.name}
+                </span>
+              </div>
 
               {candidate.bio && (
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{candidate.bio}</p>
@@ -390,14 +440,41 @@ export default function CandidatesPage() {
                     </label>
                     <select
                       value={formData.council}
-                      onChange={(e) => setFormData({ ...formData, council: e.target.value })}
+                      onChange={(e) => handleCouncilChange(e.target.value)}
                       required
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
-                      <option value="vigilancia">Consejo de Vigilancia</option>
                       <option value="administracion">Consejo de Administración</option>
-                      <option value="educacion">Consejo de Educación</option>
+                      <option value="vigilancia">Consejo de Vigilancia</option>
+                      <option value="credito">Comité de Crédito</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cargo/Posición *
+                    </label>
+                    <select
+                      value={formData.positionId}
+                      onChange={(e) => setFormData({ ...formData, positionId: e.target.value })}
+                      required
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">Selecciona un cargo</option>
+                      {availablePositionsForCouncil.map((position) => (
+                        <option key={position.id} value={position.id}>
+                          {position.name}
+                          {position.isOccupied && position.termEndDate &&
+                            ` (${position.currentHolder} - hasta ${new Date(position.termEndDate).toLocaleDateString('es-DO')})`
+                          }
+                        </option>
+                      ))}
+                    </select>
+                    {availablePositionsForCouncil.length === 0 && (
+                      <p className="text-xs text-orange-600 mt-1">
+                        No hay cargos disponibles para este consejo. Crea cargos en la sección de Posiciones.
+                      </p>
+                    )}
                   </div>
 
                   <div>
