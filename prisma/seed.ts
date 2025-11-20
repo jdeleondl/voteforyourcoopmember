@@ -8,6 +8,22 @@ async function main() {
   await prisma.attendance.deleteMany()
   await prisma.candidate.deleteMany()
   await prisma.member.deleteMany()
+  await prisma.activityLog.deleteMany()
+  await prisma.admin.deleteMany()
+
+  // Crear administrador por defecto
+  // Password: admin123 (en base64 para demostración)
+  const admin = await prisma.admin.create({
+    data: {
+      username: 'admin',
+      password: Buffer.from('admin123').toString('base64'),
+      name: 'Administrador',
+      email: 'admin@coopintec.com',
+      role: 'superadmin',
+    },
+  })
+
+  console.log(`✅ Creado administrador: ${admin.username}`)
 
   // Crear miembros de ejemplo
   const members = await Promise.all([
