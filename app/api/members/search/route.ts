@@ -13,14 +13,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Buscar por nombre o cédula (case insensitive)
+    // Buscar por nombre o cédula
+    // SQLite no soporta mode: 'insensitive', así que buscamos con contains directamente
     const members = await prisma.member.findMany({
       where: {
         OR: [
           {
             name: {
               contains: query,
-              mode: 'insensitive',
             },
           },
           {
@@ -35,8 +35,14 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Filtro manual case-insensitive para compensar limitación de SQLite
+    const filteredMembers = members.filter(member =>
+      member.name.toLowerCase().includes(query.toLowerCase()) ||
+      member.cedula.includes(query)
+    )
+
     // Mapear resultados con información de confirmación
-    const results = members.map((member) => ({
+    const results = filteredMembers.map((member) => ({
       id: member.id,
       name: member.name,
       email: member.email,
