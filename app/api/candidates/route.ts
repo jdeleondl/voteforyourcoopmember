@@ -4,16 +4,18 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const candidates = await prisma.candidate.findMany({
+      include: {
+        position: true,
+      },
       orderBy: [
         { council: 'asc' },
-        { position: 'asc' },
       ],
     })
 
     // Agrupar candidatos por consejo y posición
     const grouped: {
       [council: string]: {
-        [position: string]: typeof candidates
+        [position: string]: any[]
       }
     } = {}
 
@@ -21,10 +23,11 @@ export async function GET() {
       if (!grouped[candidate.council]) {
         grouped[candidate.council] = {}
       }
-      if (!grouped[candidate.council][candidate.position]) {
-        grouped[candidate.council][candidate.position] = []
+      const positionName = candidate.position.name
+      if (!grouped[candidate.council][positionName]) {
+        grouped[candidate.council][positionName] = []
       }
-      grouped[candidate.council][candidate.position].push(candidate)
+      grouped[candidate.council][positionName].push(candidate)
     })
 
     return NextResponse.json({ candidates: grouped })
