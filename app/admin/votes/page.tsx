@@ -5,22 +5,16 @@ import { useEffect, useState } from 'react'
 interface Candidate {
   id: string
   name: string
-  bio: string
+  bio: string | null
   photoUrl: string | null
   status: string
   voteCount: number
   percentage: number
 }
 
-interface PositionResults {
-  name: string
-  candidates: Candidate[]
-  totalVotes: number
-}
-
 interface CouncilResults {
   council: string
-  positions: Record<string, PositionResults>
+  candidates: Candidate[]
   totalVotes: number
 }
 
@@ -83,13 +77,11 @@ export default function VotesPage() {
   const exportResults = () => {
     if (!results) return
 
-    let csvContent = 'Consejo,Cargo,Candidato,Votos,Porcentaje\n'
+    let csvContent = 'Consejo,Candidato,Votos,Porcentaje\n'
 
     Object.values(results.resultsByCouncil).forEach((council) => {
-      Object.values(council.positions).forEach((position) => {
-        position.candidates.forEach((candidate) => {
-          csvContent += `${getCouncilLabel(council.council)},"${position.name}","${candidate.name}",${candidate.voteCount},${candidate.percentage.toFixed(2)}%\n`
-        })
+      council.candidates.forEach((candidate) => {
+        csvContent += `${getCouncilLabel(council.council)},"${candidate.name}",${candidate.voteCount},${candidate.percentage.toFixed(2)}%\n`
       })
     })
 
@@ -221,101 +213,86 @@ export default function VotesPage() {
             <div className={`bg-gradient-to-r ${getCouncilColor(council.council)} p-6 text-white`}>
               <h2 className="text-2xl font-bold mb-2">{getCouncilLabel(council.council)}</h2>
               <p className="text-white text-opacity-90">
-                {council.totalVotes} votos totales • {Object.keys(council.positions).length} cargo(s)
+                {council.totalVotes} votos totales • {council.candidates.length} candidato(s)
               </p>
             </div>
 
-            {/* Positions Results */}
-            <div className="p-6 space-y-6">
-              {Object.values(council.positions).map((position) => (
-                <div key={position.name} className="border-b last:border-0 pb-6 last:pb-0">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-lg">
-                      {position.name}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      ({position.totalVotes} voto{position.totalVotes !== 1 ? 's' : ''})
-                    </span>
-                  </h3>
+            {/* Candidates Results */}
+            <div className="p-6 space-y-4">
+              {council.candidates.map((candidate, index) => (
+                <div key={candidate.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start gap-4">
+                    {/* Ranking */}
+                    <div className="flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                        index === 0
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : index === 1
+                          ? 'bg-gray-100 text-gray-600'
+                          : index === 2
+                          ? 'bg-orange-100 text-orange-600'
+                          : 'bg-gray-50 text-gray-400'
+                      }`}>
+                        {index + 1}
+                      </div>
+                    </div>
 
-                  <div className="space-y-4">
-                    {position.candidates.map((candidate, index) => (
-                      <div key={candidate.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start gap-4">
-                          {/* Ranking */}
-                          <div className="flex-shrink-0">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
-                              index === 0
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : index === 1
-                                ? 'bg-gray-100 text-gray-600'
-                                : index === 2
-                                ? 'bg-orange-100 text-orange-600'
-                                : 'bg-gray-50 text-gray-400'
-                            }`}>
-                              {index + 1}
-                            </div>
-                          </div>
+                    {/* Photo */}
+                    <div className="flex-shrink-0">
+                      {candidate.photoUrl ? (
+                        <img
+                          src={candidate.photoUrl}
+                          alt={candidate.name}
+                          className="w-16 h-16 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
+                          <span className="text-2xl font-bold text-purple-600">
+                            {candidate.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                          {/* Photo */}
-                          <div className="flex-shrink-0">
-                            {candidate.photoUrl ? (
-                              <img
-                                src={candidate.photoUrl}
-                                alt={candidate.name}
-                                className="w-16 h-16 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
-                                <span className="text-2xl font-bold text-purple-600">
-                                  {candidate.name.charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <h3 className="text-lg font-bold text-gray-900">{candidate.name}</h3>
-                                {candidate.bio && (
-                                  <p className="text-sm text-gray-600 mt-1">{candidate.bio}</p>
-                                )}
-                              </div>
-                              <div className="text-right ml-4">
-                                <p className="text-2xl font-bold text-gray-900">{candidate.voteCount}</p>
-                                <p className="text-sm text-gray-500">votos</p>
-                              </div>
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div className="relative">
-                              <div className="w-full bg-gray-200 rounded-full h-3">
-                                <div
-                                  className={`bg-gradient-to-r ${getCouncilColor(council.council)} h-3 rounded-full transition-all duration-500`}
-                                  style={{ width: `${candidate.percentage}%` }}
-                                ></div>
-                              </div>
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-xs font-semibold text-gray-700">
-                                  {candidate.percentage.toFixed(1)}%
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">{candidate.name}</h3>
+                          {candidate.bio && (
+                            <p className="text-sm text-gray-600 mt-1">{candidate.bio}</p>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-2xl font-bold text-gray-900">{candidate.voteCount}</p>
+                          <p className="text-sm text-gray-500">votos</p>
                         </div>
                       </div>
-                    ))}
 
-                    {position.candidates.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        No hay votos para este cargo
+                      {/* Progress Bar */}
+                      <div className="relative">
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            className={`bg-gradient-to-r ${getCouncilColor(council.council)} h-3 rounded-full transition-all duration-500`}
+                            style={{ width: `${candidate.percentage}%` }}
+                          ></div>
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {candidate.percentage.toFixed(1)}%
+                          </span>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               ))}
+
+              {council.candidates.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No hay votos para este consejo
+                </div>
+              )}
             </div>
           </div>
         ))}

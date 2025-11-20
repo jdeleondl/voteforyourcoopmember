@@ -4,9 +4,9 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { code, votes } = body // votes es un objeto: { positionId: candidateId }
+    const { code, votes } = body // votes es un array: [candidateId1, candidateId2, ...]
 
-    if (!code || !votes || typeof votes !== 'object') {
+    if (!code || !votes || !Array.isArray(votes)) {
       return NextResponse.json(
         { error: 'Código y votos son requeridos' },
         { status: 400 }
@@ -46,81 +46,73 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar que al menos haya un voto
-    const voteEntries = Object.entries(votes)
-    if (voteEntries.length === 0) {
+    if (votes.length === 0) {
       return NextResponse.json(
         { error: 'Debe seleccionar al menos un candidato' },
         { status: 400 }
       )
     }
 
-    // Validar que todos los candidatos existan y pertenezcan a posiciones disponibles
-    for (const [positionId, candidateId] of voteEntries) {
-      // Verificar posición
-      const position = await prisma.position.findUnique({
-        where: { id: positionId },
-      })
+    // Validar que todos los candidatos existan y estén activos
+    const candidateIds = votes.filter((id) => typeof id === 'string' && id.trim() !== '')
 
-      if (!position) {
+    if (candidateIds.length === 0) {
+      return NextResponse.json(
+        { error: 'No se proporcionaron candidatos válidos' },
+        { status: 400 }
+      )
+    }
+
+    const candidates = await prisma.candidate.findMany({
+      where: {
+        id: { in: candidateIds },
+      },
+      include: {
+        member: true,
+      },
+    })
+
+    if (candidates.length !== candidateIds.length) {
+      return NextResponse.json(
+        { error: 'Uno o más candidatos no son válidos' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar que todos los candidatos estén activos
+    const inactiveCandidates = candidates.filter((c) => c.status !== 'active')
+    if (inactiveCandidates.length > 0) {
+      return NextResponse.json(
+        { error: `El candidato ${inactiveCandidates[0].member.name} no está activo` },
+        { status: 400 }
+      )
+    }
+
+    // Verificar que no se vote dos veces por el mismo consejo
+    const councilVotes: Record<string, number> = {}
+    candidates.forEach((candidate) => {
+      councilVotes[candidate.council] = (councilVotes[candidate.council] || 0) + 1
+    })
+
+    for (const [council, count] of Object.entries(councilVotes)) {
+      if (count > 1) {
+        const councilLabels: Record<string, string> = {
+          administracion: 'Consejo de Administración',
+          vigilancia: 'Consejo de Vigilancia',
+          credito: 'Comité de Crédito',
+        }
         return NextResponse.json(
-          { error: `Posición inválida: ${positionId}` },
-          { status: 400 }
-        )
-      }
-
-      // Verificar que la posición esté disponible
-      const now = new Date()
-      const isAvailable = !position.isOccupied ||
-                         (position.termEndDate && position.termEndDate <= now)
-
-      if (!isAvailable) {
-        return NextResponse.json(
-          { error: `La posición "${position.name}" no está disponible para votación` },
-          { status: 400 }
-        )
-      }
-
-      // Verificar candidato
-      const candidate = await prisma.candidate.findUnique({
-        where: { id: candidateId as string },
-        include: { position: true },
-      })
-
-      if (!candidate) {
-        return NextResponse.json(
-          { error: `Candidato inválido: ${candidateId}` },
-          { status: 400 }
-        )
-      }
-
-      if (candidate.status !== 'active') {
-        return NextResponse.json(
-          { error: `El candidato ${candidate.name} no está activo` },
-          { status: 400 }
-        )
-      }
-
-      if (candidate.positionId !== positionId) {
-        return NextResponse.json(
-          { error: `El candidato ${candidate.name} no pertenece a esta posición` },
+          { error: `No puedes votar por más de un candidato en ${councilLabels[council] || council}` },
           { status: 400 }
         )
       }
     }
 
     // Registrar votos
-    const voteRecords = []
-    for (const [positionId, candidateId] of voteEntries) {
-      const position = await prisma.position.findUnique({
-        where: { id: positionId },
-      })
-
-      voteRecords.push({
-        memberId: attendance.memberId,
-        candidateId: candidateId as string,
-        position: position!.name,
-      })
-    }
+    const voteRecords = candidateIds.map((candidateId) => ({
+      memberId: attendance.memberId,
+      candidateId,
+    }))
 
     // Crear todos los votos en una transacción
     await prisma.vote.createMany({

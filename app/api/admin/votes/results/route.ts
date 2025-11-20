@@ -8,7 +8,11 @@ export async function GET(request: NextRequest) {
       // Get all votes with candidate and member info
       const votes = await prisma.vote.findMany({
         include: {
-          candidate: true,
+          candidate: {
+            include: {
+              member: true,
+            },
+          },
           member: true,
         },
       })
@@ -26,34 +30,24 @@ export async function GET(request: NextRequest) {
       // Get all candidates with their vote counts
       const candidates = await prisma.candidate.findMany({
         include: {
-          position: true,
+          member: true,
           _count: {
             select: { votes: true },
           },
         },
         orderBy: [
           { council: 'asc' },
-          { name: 'asc' },
+          { member: { name: 'asc' } },
         ],
       })
 
-      // Group results by council and position
+      // Group results by council
       const resultsByCouncil: Record<string, any> = {}
 
       candidates.forEach((candidate) => {
         if (!resultsByCouncil[candidate.council]) {
           resultsByCouncil[candidate.council] = {
             council: candidate.council,
-            positions: {},
-            totalVotes: 0,
-          }
-        }
-
-        const positionName = candidate.position.name
-
-        if (!resultsByCouncil[candidate.council].positions[positionName]) {
-          resultsByCouncil[candidate.council].positions[positionName] = {
-            name: positionName,
             candidates: [],
             totalVotes: 0,
           }
@@ -61,9 +55,9 @@ export async function GET(request: NextRequest) {
 
         const voteCount = candidate._count.votes
 
-        resultsByCouncil[candidate.council].positions[positionName].candidates.push({
+        resultsByCouncil[candidate.council].candidates.push({
           id: candidate.id,
-          name: candidate.name,
+          name: candidate.member.name,
           bio: candidate.bio,
           photoUrl: candidate.photoUrl,
           status: candidate.status,
@@ -71,22 +65,19 @@ export async function GET(request: NextRequest) {
           percentage: 0, // Will calculate after
         })
 
-        resultsByCouncil[candidate.council].positions[positionName].totalVotes += voteCount
         resultsByCouncil[candidate.council].totalVotes += voteCount
       })
 
       // Calculate percentages and sort
       Object.values(resultsByCouncil).forEach((council: any) => {
-        Object.values(council.positions).forEach((position: any) => {
-          position.candidates.forEach((candidate: any) => {
-            if (position.totalVotes > 0) {
-              candidate.percentage = (candidate.voteCount / position.totalVotes) * 100
-            }
-          })
-
-          // Sort by vote count descending
-          position.candidates.sort((a: any, b: any) => b.voteCount - a.voteCount)
+        council.candidates.forEach((candidate: any) => {
+          if (council.totalVotes > 0) {
+            candidate.percentage = (candidate.voteCount / council.totalVotes) * 100
+          }
         })
+
+        // Sort by vote count descending
+        council.candidates.sort((a: any, b: any) => b.voteCount - a.voteCount)
       })
 
       // Get voting timeline (votes per hour)
