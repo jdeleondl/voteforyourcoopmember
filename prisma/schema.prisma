@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Miembros de la cooperativa
+model Member {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  cedula    String   @unique
+  createdAt DateTime @default(now())
+
+  attendance Attendance?
+  votes      Vote[]
+}
+
+// Registro de asistencia
+model Attendance {
+  id           String   @id @default(uuid())
+  memberId     String   @unique
+  member       Member   @relation(fields: [memberId], references: [id])
+  code         String   @unique
+  confirmedAt  DateTime @default(now())
+  emailSent    Boolean  @default(false)
+}
+
+// Candidatos para cada cargo
+model Candidate {
+  id          String   @id @default(uuid())
+  name        String
+  position    String   // Cargo: "consejo_admin_presidente", "consejo_vigilancia_secretario", etc.
+  council     String   // Consejo: "administracion", "vigilancia", "credito"
+  bio         String?  // Biografía o descripción del candidato
+  createdAt   DateTime @default(now())
+
+  votes       Vote[]
+}
+
+// Votos
+model Vote {
+  id          String    @id @default(uuid())
+  memberId    String
+  member      Member    @relation(fields: [memberId], references: [id])
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  position    String    // Para rastrear para qué cargo votó
+  votedAt     DateTime  @default(now())
+
+  @@unique([memberId, position]) // Un miembro solo puede votar una vez por cargo
+}
+
+// Configuración del sistema
+model Config {
+  id                  String   @id @default(uuid())
+  key                 String   @unique
+  value               String
+  updatedAt           DateTime @updatedAt
+}
