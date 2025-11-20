@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
       const { searchParams } = new URL(request.url)
       const council = searchParams.get('council')
       const status = searchParams.get('status')
-      const positionId = searchParams.get('positionId')
 
       const where: any = {}
 
@@ -21,21 +20,17 @@ export async function GET(request: NextRequest) {
         where.status = status
       }
 
-      if (positionId) {
-        where.positionId = positionId
-      }
-
       const candidates = await prisma.candidate.findMany({
         where,
         include: {
-          position: true,
+          member: true,
           _count: {
             select: { votes: true },
           },
         },
         orderBy: [
           { council: 'asc' },
-          { name: 'asc' },
+          { member: { name: 'asc' } },
         ],
       })
 
@@ -61,12 +56,12 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (session) => {
     try {
       const body = await request.json()
-      const { name, positionId, council, bio, photoUrl } = body
+      const { memberId, council, bio, photoUrl } = body
 
       // Validations
-      if (!name || !positionId || !council) {
+      if (!memberId || !council) {
         return NextResponse.json(
-          { error: 'Nombre, posición y consejo son requeridos' },
+          { error: 'Miembro y consejo son requeridos' },
           { status: 400 }
         )
       }
@@ -80,21 +75,60 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Verify position exists and is available
-      const position = await prisma.position.findUnique({
-        where: { id: positionId },
+      // Verify member exists
+      const member = await prisma.member.findUnique({
+        where: { id: memberId },
+        include: {
+          attendance: true,
+          positionAssignments: {
+            where: {
+              termEndDate: {
+                gte: new Date(),
+              },
+            },
+          },
+          candidates: {
+            where: {
+              council,
+              status: 'active',
+            },
+          },
+        },
       })
 
-      if (!position) {
+      if (!member) {
         return NextResponse.json(
-          { error: 'Posición no encontrada' },
+          { error: 'Miembro no encontrado' },
           { status: 404 }
         )
       }
 
-      if (position.isOccupied && position.termEndDate && position.termEndDate > new Date()) {
+      // Check if member has confirmed attendance
+      if (!member.attendance || member.attendance.status !== 'active') {
         return NextResponse.json(
-          { error: 'Esta posición está ocupada y el período aún no ha finalizado' },
+          { error: 'El miembro debe tener asistencia confirmada para ser candidato' },
+          { status: 400 }
+        )
+      }
+
+      // Check if member has an active position assignment
+      if (member.positionAssignments && member.positionAssignments.length > 0) {
+        const activeAssignment = member.positionAssignments[0]
+        const position = await prisma.position.findUnique({
+          where: { id: activeAssignment.positionId },
+        })
+        return NextResponse.json(
+          {
+            error: `Este miembro ocupa actualmente el cargo de ${position?.name} hasta ${new Date(activeAssignment.termEndDate).toLocaleDateString('es-DO')} y no puede ser candidato`,
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check if member is already a candidate for this council
+      if (member.candidates && member.candidates.length > 0) {
+        return NextResponse.json(
+          { error: 'Este miembro ya es candidato para este consejo' },
           { status: 400 }
         )
       }
@@ -102,15 +136,14 @@ export async function POST(request: NextRequest) {
       // Create candidate
       const candidate = await prisma.candidate.create({
         data: {
-          name,
-          positionId,
+          memberId,
           council,
-          bio: bio || '',
+          bio: bio || null,
           photoUrl: photoUrl || null,
           status: 'active',
         },
         include: {
-          position: true,
+          member: true,
         },
       })
 
@@ -120,7 +153,7 @@ export async function POST(request: NextRequest) {
         'create_candidate',
         'candidate',
         candidate.id,
-        { name, position: position.name, council },
+        { memberName: member.name, council },
         request
       )
 

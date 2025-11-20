@@ -7,6 +7,7 @@ async function main() {
   await prisma.vote.deleteMany()
   await prisma.attendance.deleteMany()
   await prisma.candidate.deleteMany()
+  await prisma.positionAssignment.deleteMany()
   await prisma.position.deleteMany()
   await prisma.member.deleteMany()
   await prisma.activityLog.deleteMany()
@@ -26,8 +27,31 @@ async function main() {
 
   console.log(`✅ Creado administrador: ${admin.username}`)
 
-  // Crear miembros de ejemplo
+  // Crear miembros de ejemplo (algunos tendrán cargos asignados, otros serán candidatos)
   const members = await Promise.all([
+    // Miembros con cargos activos (NO serán candidatos)
+    prisma.member.create({
+      data: {
+        name: 'José Manuel Pérez',
+        email: 'jose.perez@example.com',
+        cedula: '001-0000001-0',
+      },
+    }),
+    prisma.member.create({
+      data: {
+        name: 'Ricardo Gómez',
+        email: 'ricardo.gomez@example.com',
+        cedula: '001-0000002-1',
+      },
+    }),
+    prisma.member.create({
+      data: {
+        name: 'Manuel Sánchez',
+        email: 'manuel.sanchez@example.com',
+        cedula: '001-0000003-2',
+      },
+    }),
+    // Miembros candidatos para votación
     prisma.member.create({
       data: {
         name: 'Juan Pérez',
@@ -84,124 +108,64 @@ async function main() {
         cedula: '001-8901234-5',
       },
     }),
+    prisma.member.create({
+      data: {
+        name: 'Sandra Cruz',
+        email: 'sandra.cruz@example.com',
+        cedula: '001-9012345-6',
+      },
+    }),
+    prisma.member.create({
+      data: {
+        name: 'Alberto Gutiérrez',
+        email: 'alberto.gutierrez@example.com',
+        cedula: '001-0123456-7',
+      },
+    }),
+    prisma.member.create({
+      data: {
+        name: 'Patricia Ramírez',
+        email: 'patricia.ramirez@example.com',
+        cedula: '001-1111111-1',
+      },
+    }),
+    prisma.member.create({
+      data: {
+        name: 'Jorge Morales',
+        email: 'jorge.morales@example.com',
+        cedula: '001-2222222-2',
+      },
+    }),
   ])
 
   console.log(`✅ Creados ${members.length} miembros`)
 
   // Crear posiciones para Consejo de Administración
   const positionsAdmin = [
-    {
-      name: 'Presidente',
-      council: 'administracion',
-      order: 1,
-      isOccupied: true,
-      currentHolder: 'José Manuel Pérez',
-      termEndDate: new Date('2026-03-15'), // Período no finalizado
-    },
-    {
-      name: 'Vicepresidente',
-      council: 'administracion',
-      order: 2,
-      isOccupied: false,
-    },
-    {
-      name: 'Tesorero',
-      council: 'administracion',
-      order: 3,
-      isOccupied: true,
-      currentHolder: 'Angela María Torres',
-      termEndDate: new Date('2025-06-30'), // Período finalizado
-    },
-    {
-      name: 'Secretario',
-      council: 'administracion',
-      order: 4,
-      isOccupied: false,
-    },
-    {
-      name: 'Vocal 1',
-      council: 'administracion',
-      order: 5,
-      isOccupied: false,
-    },
-    {
-      name: 'Vocal 2',
-      council: 'administracion',
-      order: 6,
-      isOccupied: false,
-    },
-    {
-      name: 'Suplente 1',
-      council: 'administracion',
-      order: 7,
-      isOccupied: false,
-    },
+    { name: 'Presidente', council: 'administracion', order: 1 },
+    { name: 'Vicepresidente', council: 'administracion', order: 2 },
+    { name: 'Tesorero', council: 'administracion', order: 3 },
+    { name: 'Secretario', council: 'administracion', order: 4 },
+    { name: 'Vocal 1', council: 'administracion', order: 5 },
+    { name: 'Vocal 2', council: 'administracion', order: 6 },
+    { name: 'Suplente 1', council: 'administracion', order: 7 },
   ]
 
   // Crear posiciones para Consejo de Vigilancia
   const positionsVigilancia = [
-    {
-      name: 'Presidente',
-      council: 'vigilancia',
-      order: 1,
-      isOccupied: false,
-    },
-    {
-      name: 'Secretario',
-      council: 'vigilancia',
-      order: 2,
-      isOccupied: true,
-      currentHolder: 'Ricardo Gómez',
-      termEndDate: new Date('2026-01-20'),
-    },
-    {
-      name: 'Vocal 1',
-      council: 'vigilancia',
-      order: 3,
-      isOccupied: false,
-    },
-    {
-      name: 'Vocal 2',
-      council: 'vigilancia',
-      order: 4,
-      isOccupied: false,
-    },
-    {
-      name: 'Suplente 1',
-      council: 'vigilancia',
-      order: 5,
-      isOccupied: false,
-    },
+    { name: 'Presidente', council: 'vigilancia', order: 1 },
+    { name: 'Secretario', council: 'vigilancia', order: 2 },
+    { name: 'Vocal 1', council: 'vigilancia', order: 3 },
+    { name: 'Vocal 2', council: 'vigilancia', order: 4 },
+    { name: 'Suplente 1', council: 'vigilancia', order: 5 },
   ]
 
   // Crear posiciones para Comité de Crédito
   const positionsCredito = [
-    {
-      name: 'Presidente',
-      council: 'credito',
-      order: 1,
-      isOccupied: false,
-    },
-    {
-      name: 'Secretario',
-      council: 'credito',
-      order: 2,
-      isOccupied: false,
-    },
-    {
-      name: 'Vocal',
-      council: 'credito',
-      order: 3,
-      isOccupied: true,
-      currentHolder: 'Manuel Sánchez',
-      termEndDate: new Date('2025-12-31'),
-    },
-    {
-      name: 'Suplente 1',
-      council: 'credito',
-      order: 4,
-      isOccupied: false,
-    },
+    { name: 'Presidente', council: 'credito', order: 1 },
+    { name: 'Secretario', council: 'credito', order: 2 },
+    { name: 'Vocal', council: 'credito', order: 3 },
+    { name: 'Suplente 1', council: 'credito', order: 4 },
   ]
 
   const allPositions = [...positionsAdmin, ...positionsVigilancia, ...positionsCredito]
@@ -217,74 +181,95 @@ async function main() {
 
   console.log(`✅ Creadas ${allPositions.length} posiciones`)
 
-  // Crear candidatos solo para posiciones disponibles
-  const candidates = [
-    // Administración - Vicepresidente (disponible)
+  // Crear asignaciones de cargos actuales (miembros que ocupan cargos y NO serán candidatos)
+  const assignments = [
     {
-      name: 'Sandra Patricia Cruz',
-      positionId: createdPositions['administracion-Vicepresidente'].id,
-      council: 'administracion',
-      bio: 'Licenciada en Administración con 10 años de experiencia en cooperativas',
+      positionId: createdPositions['administracion-Presidente'].id,
+      memberId: members[0].id, // José Manuel Pérez
+      termStartDate: new Date('2024-03-15'),
+      termEndDate: new Date('2026-03-15'), // Período activo hasta 2026
     },
     {
-      name: 'Carlos Alberto Méndez',
-      positionId: createdPositions['administracion-Vicepresidente'].id,
+      positionId: createdPositions['vigilancia-Secretario'].id,
+      memberId: members[1].id, // Ricardo Gómez
+      termStartDate: new Date('2024-01-20'),
+      termEndDate: new Date('2026-01-20'), // Período activo hasta 2026
+    },
+    {
+      positionId: createdPositions['credito-Vocal'].id,
+      memberId: members[2].id, // Manuel Sánchez
+      termStartDate: new Date('2024-01-01'),
+      termEndDate: new Date('2025-12-31'), // Período finaliza este año
+    },
+  ]
+
+  for (const assignment of assignments) {
+    await prisma.positionAssignment.create({
+      data: assignment,
+    })
+  }
+
+  console.log(`✅ Creadas ${assignments.length} asignaciones de cargos`)
+
+  // Crear candidatos de miembros SIN cargos activos (índices 3 en adelante)
+  const candidates = [
+    // Consejo de Administración
+    {
+      memberId: members[3].id, // Juan Pérez
+      council: 'administracion',
+      bio: 'Licenciado en Administración con 10 años de experiencia en cooperativas',
+    },
+    {
+      memberId: members[4].id, // María González
       council: 'administracion',
       bio: 'MBA, especialista en gestión cooperativa',
     },
-    // Administración - Secretario (disponible)
     {
-      name: 'Patricia Isabel Ramírez',
-      positionId: createdPositions['administracion-Secretario'].id,
+      memberId: members[5].id, // Pedro Rodríguez
+      council: 'administracion',
+      bio: 'Contador público certificado',
+    },
+    {
+      memberId: members[6].id, // Ana Martínez
       council: 'administracion',
       bio: 'Experta en documentación y actas institucionales',
     },
     {
-      name: 'Jorge Eduardo Morales',
-      positionId: createdPositions['administracion-Secretario'].id,
+      memberId: members[13].id, // Patricia Ramírez
       council: 'administracion',
     },
-    // Administración - Vocal 1
+    // Consejo de Vigilancia
     {
-      name: 'Diana Carolina Vega',
-      positionId: createdPositions['administracion-Vocal 1'].id,
-      council: 'administracion',
-    },
-    // Vigilancia - Presidente (disponible)
-    {
-      name: 'Ricardo Antonio Herrera',
-      positionId: createdPositions['vigilancia-Presidente'].id,
+      memberId: members[7].id, // Carlos Sánchez
       council: 'vigilancia',
       bio: 'Auditor certificado con 15 años de experiencia',
     },
     {
-      name: 'Gabriela María Ortiz',
-      positionId: createdPositions['vigilancia-Presidente'].id,
+      memberId: members[8].id, // Laura Fernández
       council: 'vigilancia',
       bio: 'Contadora pública, especialista en auditoría',
     },
-    // Vigilancia - Vocal 1
     {
-      name: 'Andrés Felipe Rojas',
-      positionId: createdPositions['vigilancia-Vocal 1'].id,
+      memberId: members[9].id, // Roberto López
       council: 'vigilancia',
     },
-    // Crédito - Presidente (disponible)
     {
-      name: 'Alberto José Gutiérrez',
-      positionId: createdPositions['credito-Presidente'].id,
+      memberId: members[14].id, // Jorge Morales
+      council: 'vigilancia',
+    },
+    // Comité de Crédito
+    {
+      memberId: members[10].id, // Carmen Díaz
       council: 'credito',
       bio: 'Economista con experiencia en análisis crediticio',
     },
     {
-      name: 'Verónica Andrea Silva',
-      positionId: createdPositions['credito-Presidente'].id,
+      memberId: members[11].id, // Sandra Cruz
       council: 'credito',
+      bio: 'Especialista en gestión de riesgos financieros',
     },
-    // Crédito - Secretario
     {
-      name: 'Javier Alejandro Vargas',
-      positionId: createdPositions['credito-Secretario'].id,
+      memberId: members[12].id, // Alberto Gutiérrez
       council: 'credito',
     },
   ]
@@ -301,7 +286,12 @@ async function main() {
   console.log(`   - Admin: admin / admin123`)
   console.log(`   - Miembros: ${members.length}`)
   console.log(`   - Posiciones: ${allPositions.length}`)
-  console.log(`   - Candidatos: ${candidates.length}`)
+  console.log(`   - Cargos asignados (ocupados): ${assignments.length}`)
+  console.log(`   - Candidatos para votación: ${candidates.length}`)
+  console.log('\n👥 MIEMBROS CON CARGOS ACTIVOS (NO son candidatos):')
+  console.log(`   - ${members[0].name} - Presidente Administración (hasta 2026)`)
+  console.log(`   - ${members[1].name} - Secretario Vigilancia (hasta 2026)`)
+  console.log(`   - ${members[2].name} - Vocal Crédito (hasta fin 2025)`)
 }
 
 main()
