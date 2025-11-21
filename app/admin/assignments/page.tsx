@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 interface Member {
   id: string
   name: string
-  cedula: string
+  employeeId: string
 }
 
 interface Position {
@@ -303,7 +303,7 @@ export default function AssignmentsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{assignment.member.name}</div>
-                    <div className="text-sm text-gray-500">{assignment.member.cedula}</div>
+                    <div className="text-sm text-gray-500">ID: {assignment.member.employeeId}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(assignment.termStartDate).toLocaleDateString('es-DO')}
@@ -418,7 +418,7 @@ export default function AssignmentsPage() {
                     <option value="">Selecciona un miembro</option>
                     {members.map((member) => (
                       <option key={member.id} value={member.id}>
-                        {member.name} - {member.cedula}
+                        {member.name} - {member.employeeId}
                       </option>
                     ))}
                   </select>

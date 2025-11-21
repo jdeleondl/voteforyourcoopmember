@@ -6,7 +6,7 @@ interface Member {
   id: string
   name: string
   email: string
-  cedula: string
+  employeeId: string
 }
 
 interface Candidate {
@@ -441,7 +441,7 @@ export default function CandidatesPage() {
                     <option value="">Selecciona un miembro</option>
                     {availableMembers.map((member) => (
                       <option key={member.id} value={member.id}>
-                        {member.name} - {member.cedula}
+                        {member.name} - {member.employeeId}
                       </option>
                     ))}
                   </select>

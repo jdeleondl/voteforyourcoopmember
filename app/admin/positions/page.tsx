@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 interface Position {
   id: string
@@ -13,7 +14,7 @@ interface Position {
   createdAt: string
   updatedAt: string
   _count: {
-    candidates: number
+    assignments: number
   }
 }
 
@@ -27,9 +28,6 @@ export default function PositionsPage() {
     name: '',
     council: 'administracion',
     order: 1,
-    isOccupied: false,
-    currentHolder: '',
-    termEndDate: '',
   })
   const [processing, setProcessing] = useState(false)
 
@@ -59,9 +57,6 @@ export default function PositionsPage() {
         name: position.name,
         council: position.council,
         order: position.order,
-        isOccupied: position.isOccupied,
-        currentHolder: position.currentHolder || '',
-        termEndDate: position.termEndDate ? position.termEndDate.split('T')[0] : '',
       })
     } else {
       setEditingPosition(null)
@@ -69,9 +64,6 @@ export default function PositionsPage() {
         name: '',
         council: 'administracion',
         order: 1,
-        isOccupied: false,
-        currentHolder: '',
-        termEndDate: '',
       })
     }
     setShowModal(true)
@@ -93,16 +85,10 @@ export default function PositionsPage() {
 
       const method = editingPosition ? 'PUT' : 'POST'
 
-      const payload = {
-        ...formData,
-        currentHolder: formData.currentHolder || null,
-        termEndDate: formData.termEndDate || null,
-      }
-
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formData),
       })
 
       const data = await response.json()
@@ -121,9 +107,9 @@ export default function PositionsPage() {
     }
   }
 
-  const handleDelete = async (id: string, name: string, candidatesCount: number) => {
-    if (candidatesCount > 0) {
-      alert(`No se puede eliminar "${name}" porque tiene ${candidatesCount} candidatos registrados.`)
+  const handleDelete = async (id: string, name: string, assignmentsCount: number) => {
+    if (assignmentsCount > 0) {
+      alert(`No se puede eliminar "${name}" porque tiene ${assignmentsCount} asignaciones registradas.`)
       return
     }
 
@@ -196,6 +182,12 @@ export default function PositionsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Posiciones</h1>
           <p className="text-gray-600">Configura los cargos disponibles por consejo</p>
+          <p className="text-sm text-gray-500 mt-1">
+            💡 Los cargos se asignan a miembros en la sección{' '}
+            <Link href="/admin/assignments" className="text-purple-600 underline">
+              Asignaciones
+            </Link>
+          </p>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -227,9 +219,9 @@ export default function PositionsPage() {
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600">Candidatos</p>
+          <p className="text-sm text-gray-600">Asignaciones Totales</p>
           <p className="text-2xl font-bold text-blue-600">
-            {positions.reduce((sum, p) => sum + p._count.candidates, 0)}
+            {positions.reduce((sum, p) => sum + p._count.assignments, 0)}
           </p>
         </div>
       </div>
@@ -266,7 +258,7 @@ export default function PositionsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ocupante Actual</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fin de Período</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidatos</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asignaciones</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
@@ -301,7 +293,7 @@ export default function PositionsPage() {
                             : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {position._count.candidates}
+                          {position._count.assignments}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                           <div className="flex gap-2 justify-end">
@@ -312,9 +304,10 @@ export default function PositionsPage() {
                               Editar
                             </button>
                             <button
-                              onClick={() => handleDelete(position.id, position.name, position._count.candidates)}
-                              disabled={position._count.candidates > 0}
+                              onClick={() => handleDelete(position.id, position.name, position._count.assignments)}
+                              disabled={position._count.assignments > 0}
                               className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={position._count.assignments > 0 ? 'No se puede eliminar porque tiene asignaciones' : ''}
                             >
                               Eliminar
                             </button>
@@ -334,7 +327,8 @@ export default function PositionsPage() {
           <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <p className="text-gray-500">No hay posiciones registradas</p>
+          <p className="text-gray-500 mb-2">No hay posiciones registradas</p>
+          <p className="text-sm text-gray-400">Crea cargos que luego podrás asignar a miembros</p>
         </div>
       )}
 
@@ -391,53 +385,20 @@ export default function PositionsPage() {
                       min="1"
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Define el orden en que se mostrará este cargo (1 = primero)
+                    </p>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.isOccupied}
-                        onChange={(e) => setFormData({ ...formData, isOccupied: e.target.checked })}
-                        className="rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700">
-                        Cargo actualmente ocupado
-                      </span>
-                    </label>
-                  </div>
-
-                  {formData.isOccupied && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Ocupante Actual
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.currentHolder}
-                          onChange={(e) => setFormData({ ...formData, currentHolder: e.target.value })}
-                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="Nombre del ocupante actual"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Fecha de Finalización del Período
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.termEndDate}
-                          onChange={(e) => setFormData({ ...formData, termEndDate: e.target.value })}
-                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Si la fecha ya pasó, el cargo se considerará disponible para votación
-                        </p>
-                      </div>
-                    </>
-                  )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                  <p className="text-sm text-blue-800">
+                    💡 Para asignar este cargo a un miembro, ve a la sección{' '}
+                    <Link href="/admin/assignments" className="underline font-semibold">
+                      Asignaciones
+                    </Link>{' '}
+                    después de crear la posición.
+                  </p>
                 </div>
 
                 <div className="flex gap-3 mt-6">

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         id: member.id,
         name: member.name,
         email: member.email,
-        cedula: member.cedula,
+        employeeId: member.employeeId,
         phone: member.phone,
         status: member.status,
         createdAt: member.createdAt.toISOString(),
@@ -45,28 +45,36 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (session) => {
     try {
       const body = await request.json()
-      const { name, email, cedula, phone, status } = body
+      const { name, email, employeeId, phone, status } = body
 
-      if (!name || !email || !cedula) {
+      if (!name || !email || !employeeId) {
         return NextResponse.json(
-          { error: 'Nombre, email y cédula son requeridos' },
+          { error: 'Nombre, email e ID de empleado son requeridos' },
           { status: 400 }
         )
       }
 
-      // Check if email or cedula already exists
+      // Validate employeeId is 8 digits
+      if (!/^\d{8}$/.test(employeeId)) {
+        return NextResponse.json(
+          { error: 'El ID de empleado debe tener exactamente 8 dígitos' },
+          { status: 400 }
+        )
+      }
+
+      // Check if email or employeeId already exists
       const existing = await prisma.member.findFirst({
         where: {
           OR: [
             { email },
-            { cedula },
+            { employeeId },
           ],
         },
       })
 
       if (existing) {
         return NextResponse.json(
-          { error: 'Ya existe un miembro con ese email o cédula' },
+          { error: 'Ya existe un miembro con ese email o ID de empleado' },
           { status: 400 }
         )
       }
@@ -75,7 +83,7 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           email,
-          cedula,
+          employeeId,
           phone: phone || null,
           status: status || 'active',
         },
@@ -86,7 +94,7 @@ export async function POST(request: NextRequest) {
         'create_member',
         'member',
         member.id,
-        { name, email, cedula },
+        { name, email, employeeId },
         request
       )
 

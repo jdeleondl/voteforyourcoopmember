@@ -34,21 +34,21 @@ async function main() {
       data: {
         name: 'José Manuel Pérez',
         email: 'jose.perez@example.com',
-        cedula: '001-0000001-0',
+        employeeId: '10000001',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Ricardo Gómez',
         email: 'ricardo.gomez@example.com',
-        cedula: '001-0000002-1',
+        employeeId: '10000002',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Manuel Sánchez',
         email: 'manuel.sanchez@example.com',
-        cedula: '001-0000003-2',
+        employeeId: '10000003',
       },
     }),
     // Miembros candidatos para votación
@@ -56,84 +56,84 @@ async function main() {
       data: {
         name: 'Juan Pérez',
         email: 'juan.perez@example.com',
-        cedula: '001-1234567-8',
+        employeeId: '12345678',
       },
     }),
     prisma.member.create({
       data: {
         name: 'María González',
         email: 'maria.gonzalez@example.com',
-        cedula: '001-2345678-9',
+        employeeId: '23456789',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Pedro Rodríguez',
         email: 'pedro.rodriguez@example.com',
-        cedula: '001-3456789-0',
+        employeeId: '34567890',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Ana Martínez',
         email: 'ana.martinez@example.com',
-        cedula: '001-4567890-1',
+        employeeId: '45678901',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Carlos Sánchez',
         email: 'carlos.sanchez@example.com',
-        cedula: '001-5678901-2',
+        employeeId: '56789012',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Laura Fernández',
         email: 'laura.fernandez@example.com',
-        cedula: '001-6789012-3',
+        employeeId: '67890123',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Roberto López',
         email: 'roberto.lopez@example.com',
-        cedula: '001-7890123-4',
+        employeeId: '78901234',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Carmen Díaz',
         email: 'carmen.diaz@example.com',
-        cedula: '001-8901234-5',
+        employeeId: '89012345',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Sandra Cruz',
         email: 'sandra.cruz@example.com',
-        cedula: '001-9012345-6',
+        employeeId: '90123456',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Alberto Gutiérrez',
         email: 'alberto.gutierrez@example.com',
-        cedula: '001-0123456-7',
+        employeeId: '01234567',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Patricia Ramírez',
         email: 'patricia.ramirez@example.com',
-        cedula: '001-1111111-1',
+        employeeId: '11111111',
       },
     }),
     prisma.member.create({
       data: {
         name: 'Jorge Morales',
         email: 'jorge.morales@example.com',
-        cedula: '001-2222222-2',
+        employeeId: '22222222',
       },
     }),
   ])

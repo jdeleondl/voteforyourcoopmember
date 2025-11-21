@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const data = attendances.map((attendance, index) => ({
       '#': index + 1,
       'Nombre': attendance.member.name,
-      'Cédula': attendance.member.cedula,
+      'ID Empleado': attendance.member.employeeId,
       'Correo': attendance.member.email,
       'Fecha de Confirmación': new Date(attendance.confirmedAt).toLocaleString('es-DO'),
       'Código': attendance.code,

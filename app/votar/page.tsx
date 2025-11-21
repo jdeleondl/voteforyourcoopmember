@@ -7,7 +7,7 @@ interface Member {
   id: string
   name: string
   email: string
-  cedula: string
+  employeeId: string
 }
 
 interface Candidate {

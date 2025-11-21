@@ -10,7 +10,7 @@ interface AttendanceStats {
   attendees: Array<{
     name: string
     email: string
-    cedula: string
+    employeeId: string
     confirmedAt: string
   }>
 }
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 text-gray-600">{index + 1}</td>
                       <td className="py-3 px-4 font-medium text-gray-800">{attendee.name}</td>
-                      <td className="py-3 px-4 text-gray-600">{attendee.cedula}</td>
+                      <td className="py-3 px-4 text-gray-600">{attendee.employeeId}</td>
                       <td className="py-3 px-4 text-gray-600">{attendee.email}</td>
                       <td className="py-3 px-4 text-gray-600">
                         {new Date(attendee.confirmedAt).toLocaleString('es-DO')}

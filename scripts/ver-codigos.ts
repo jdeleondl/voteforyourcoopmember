@@ -33,7 +33,7 @@ async function getCodes() {
 
     attendances.forEach((attendance, index) => {
       console.log(`${index + 1}. ${attendance.member.name}`)
-      console.log(`   Cédula: ${attendance.member.cedula}`)
+      console.log(`   ID Empleado: ${attendance.member.employeeId}`)
       console.log(`   Email: ${attendance.member.email}`)
       console.log(`   Código: ${attendance.code}`)
       console.log(`   Confirmado: ${new Date(attendance.confirmedAt).toLocaleString('es-DO')}`)

@@ -14,7 +14,7 @@ interface Attendance {
     id: string
     name: string
     email: string
-    cedula: string
+    employeeId: string
     phone?: string
   }
 }
@@ -43,7 +43,7 @@ export default function AttendancePage() {
 
   const filteredAttendances = attendances.filter(att =>
     att.member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    att.member.cedula.includes(searchTerm) ||
+    att.member.employeeId.includes(searchTerm) ||
     att.code.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -243,7 +243,7 @@ export default function AttendancePage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{attendance.member.name}</div>
-                      <div className="text-sm text-gray-500">{attendance.member.cedula}</div>
+                      <div className="text-sm text-gray-500">ID: {attendance.member.employeeId}</div>
                       <div className="text-sm text-gray-500">{attendance.member.email}</div>
                     </div>
                   </td>
