@@ -33,17 +33,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar si ya votó
+    // Obtener votos existentes con información del candidato
     const existingVotes = await prisma.vote.findMany({
       where: { memberId: attendance.memberId },
+      include: {
+        candidate: {
+          include: { member: true }
+        }
+      }
     })
 
-    const hasVoted = existingVotes.length > 0
+    // Obtener consejos que tienen candidatos activos
+    const councilsWithCandidates = await prisma.candidate.groupBy({
+      by: ['council'],
+      where: { status: 'active' },
+      _count: { id: true }
+    })
+
+    const availableCouncils = councilsWithCandidates
+      .filter(c => c._count.id > 0)
+      .map(c => c.council)
+
+    // Mapear votos por consejo
+    const votesByCouncil: Record<string, { candidateId: string, candidateName: string }> = {}
+    existingVotes.forEach(vote => {
+      votesByCouncil[vote.candidate.council] = {
+        candidateId: vote.candidateId,
+        candidateName: vote.candidate.member.name
+      }
+    })
+
+    // Verificar si completó todos los consejos disponibles
+    const votedCouncils = Object.keys(votesByCouncil)
+    const hasCompletedAllVotes = availableCouncils.every(council => votedCouncils.includes(council))
 
     return NextResponse.json({
-      hasVoted,
+      memberId: attendance.memberId,
       memberName: attendance.member.name,
       votesCount: existingVotes.length,
+      votesByCouncil,
+      availableCouncils,
+      hasCompletedAllVotes,
+      // hasVoted es true solo si completó todos los votos disponibles
+      hasVoted: hasCompletedAllVotes && availableCouncils.length > 0,
     })
   } catch (error) {
     console.error('Error verifying vote status:', error)

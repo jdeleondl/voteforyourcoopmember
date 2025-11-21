@@ -3,6 +3,49 @@ import { prisma } from '@/lib/prisma'
 import { nanoid } from 'nanoid'
 import { sendConfirmationEmail } from '@/lib/email'
 
+// Helper function to check attendance window
+async function isAttendanceWindowOpen(): Promise<{ open: boolean; message?: string }> {
+  const enabledConfig = await prisma.config.findUnique({
+    where: { key: 'ATTENDANCE_WINDOW_ENABLED' }
+  })
+
+  // If not enabled or not found, allow attendance
+  if (!enabledConfig || enabledConfig.value !== 'true') {
+    return { open: true }
+  }
+
+  const startConfig = await prisma.config.findUnique({
+    where: { key: 'ATTENDANCE_WINDOW_START' }
+  })
+  const endConfig = await prisma.config.findUnique({
+    where: { key: 'ATTENDANCE_WINDOW_END' }
+  })
+
+  const now = new Date()
+
+  if (startConfig?.value) {
+    const startDate = new Date(startConfig.value)
+    if (now < startDate) {
+      return {
+        open: false,
+        message: `La confirmación de asistencia aún no está disponible. Inicia el ${startDate.toLocaleDateString('es-DO')} a las ${startDate.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}`
+      }
+    }
+  }
+
+  if (endConfig?.value) {
+    const endDate = new Date(endConfig.value)
+    if (now > endDate) {
+      return {
+        open: false,
+        message: `El período de confirmación de asistencia ha finalizado. Cerró el ${endDate.toLocaleDateString('es-DO')} a las ${endDate.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}`
+      }
+    }
+  }
+
+  return { open: true }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -11,6 +54,15 @@ export async function POST(request: NextRequest) {
     if (!memberId) {
       return NextResponse.json(
         { error: 'Se requiere el ID del miembro' },
+        { status: 400 }
+      )
+    }
+
+    // Check if attendance window is open
+    const windowCheck = await isAttendanceWindowOpen()
+    if (!windowCheck.open) {
+      return NextResponse.json(
+        { error: windowCheck.message },
         { status: 400 }
       )
     }

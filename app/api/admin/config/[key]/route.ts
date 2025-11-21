@@ -10,7 +10,7 @@ export async function PUT(
   return withAuth(request, async (session) => {
     try {
       const body = await request.json()
-      const { value } = body
+      const { value, category, description } = body
       const { key } = params
 
       // Upsert config
@@ -19,11 +19,15 @@ export async function PUT(
         update: {
           value,
           updatedBy: session.username,
+          ...(category && { category }),
+          ...(description && { description }),
         },
         create: {
           key,
           value,
           updatedBy: session.username,
+          category: category || 'general',
+          description: description || null,
         },
       })
 

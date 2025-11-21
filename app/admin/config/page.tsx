@@ -19,6 +19,12 @@ interface ConfigCategory {
 
 const categories: ConfigCategory[] = [
   {
+    name: 'attendance',
+    label: 'Asistencia',
+    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    description: 'Ventana de tiempo para confirmar asistencia',
+  },
+  {
     name: 'database',
     label: 'Base de Datos',
     icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
@@ -47,13 +53,61 @@ const categories: ConfigCategory[] = [
 export default function ConfigPage() {
   const [configs, setConfigs] = useState<ConfigItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeCategory, setActiveCategory] = useState('database')
+  const [activeCategory, setActiveCategory] = useState('attendance')
   const [editing, setEditing] = useState<string | null>(null)
   const [testingConnection, setTestingConnection] = useState(false)
+
+  // Attendance window state
+  const [attendanceWindow, setAttendanceWindow] = useState({
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    enabled: false,
+  })
+  const [savingAttendance, setSavingAttendance] = useState(false)
 
   useEffect(() => {
     fetchConfigs()
   }, [])
+
+  useEffect(() => {
+    // Parse attendance window from configs
+    const startConfig = configs.find(c => c.key === 'ATTENDANCE_WINDOW_START')
+    const endConfig = configs.find(c => c.key === 'ATTENDANCE_WINDOW_END')
+    const enabledConfig = configs.find(c => c.key === 'ATTENDANCE_WINDOW_ENABLED')
+
+    if (startConfig?.value) {
+      try {
+        const startDateTime = new Date(startConfig.value)
+        setAttendanceWindow(prev => ({
+          ...prev,
+          startDate: startDateTime.toISOString().split('T')[0],
+          startTime: startDateTime.toTimeString().slice(0, 5),
+        }))
+      } catch (e) {
+        // Invalid date format
+      }
+    }
+
+    if (endConfig?.value) {
+      try {
+        const endDateTime = new Date(endConfig.value)
+        setAttendanceWindow(prev => ({
+          ...prev,
+          endDate: endDateTime.toISOString().split('T')[0],
+          endTime: endDateTime.toTimeString().slice(0, 5),
+        }))
+      } catch (e) {
+        // Invalid date format
+      }
+    }
+
+    setAttendanceWindow(prev => ({
+      ...prev,
+      enabled: enabledConfig?.value === 'true',
+    }))
+  }, [configs])
 
   const fetchConfigs = async () => {
     try {
@@ -86,6 +140,42 @@ export default function ConfigPage() {
       }
     } catch (error) {
       alert('Error al guardar configuración')
+    }
+  }
+
+  const handleSaveAttendanceWindow = async () => {
+    setSavingAttendance(true)
+
+    try {
+      // Prepare start and end datetime strings
+      const startDateTime = attendanceWindow.startDate && attendanceWindow.startTime
+        ? new Date(`${attendanceWindow.startDate}T${attendanceWindow.startTime}`).toISOString()
+        : ''
+      const endDateTime = attendanceWindow.endDate && attendanceWindow.endTime
+        ? new Date(`${attendanceWindow.endDate}T${attendanceWindow.endTime}`).toISOString()
+        : ''
+
+      // Save all three config values
+      const updates = [
+        { key: 'ATTENDANCE_WINDOW_START', value: startDateTime, category: 'attendance', description: 'Fecha/hora de inicio para confirmar asistencia' },
+        { key: 'ATTENDANCE_WINDOW_END', value: endDateTime, category: 'attendance', description: 'Fecha/hora de fin para confirmar asistencia' },
+        { key: 'ATTENDANCE_WINDOW_ENABLED', value: String(attendanceWindow.enabled), category: 'attendance', description: 'Habilitar restricción de ventana de tiempo' },
+      ]
+
+      for (const update of updates) {
+        await fetch(`/api/admin/config/${update.key}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(update),
+        })
+      }
+
+      alert('Ventana de asistencia guardada exitosamente')
+      fetchConfigs()
+    } catch (error) {
+      alert('Error al guardar la configuración')
+    } finally {
+      setSavingAttendance(false)
     }
   }
 
@@ -167,6 +257,132 @@ export default function ConfigPage() {
             </svg>
             {testingConnection ? 'Probando...' : `Probar Conexión ${activeCategory === 'database' ? 'BD' : 'Email'}`}
           </button>
+        </div>
+      )}
+
+      {/* Attendance Window Configuration */}
+      {activeCategory === 'attendance' && (
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Ventana de Tiempo para Confirmar Asistencia
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Define el rango de fecha y hora durante el cual los miembros pueden confirmar su asistencia.
+          </p>
+
+          {/* Enable/Disable Toggle */}
+          <div className="mb-6">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={attendanceWindow.enabled}
+                onChange={(e) => setAttendanceWindow(prev => ({ ...prev, enabled: e.target.checked }))}
+                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+              />
+              <span className="font-medium text-gray-700">
+                Habilitar restricción de ventana de tiempo
+              </span>
+            </label>
+            <p className="text-sm text-gray-500 mt-1 ml-8">
+              {attendanceWindow.enabled
+                ? 'Los miembros solo podrán confirmar asistencia dentro del rango especificado'
+                : 'Los miembros pueden confirmar asistencia en cualquier momento'}
+            </p>
+          </div>
+
+          {attendanceWindow.enabled && (
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Start DateTime */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Inicio de Ventana
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      value={attendanceWindow.startDate}
+                      onChange={(e) => setAttendanceWindow(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                    <input
+                      type="time"
+                      value={attendanceWindow.startTime}
+                      onChange={(e) => setAttendanceWindow(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* End DateTime */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Fin de Ventana
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      value={attendanceWindow.endDate}
+                      onChange={(e) => setAttendanceWindow(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                    <input
+                      type="time"
+                      value={attendanceWindow.endTime}
+                      onChange={(e) => setAttendanceWindow(prev => ({ ...prev, endTime: e.target.value }))}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Current Status */}
+          {attendanceWindow.enabled && attendanceWindow.startDate && attendanceWindow.endDate && (
+            <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <h4 className="font-medium text-purple-800 mb-2">Resumen de la Configuración:</h4>
+              <p className="text-sm text-purple-700">
+                La confirmación de asistencia estará disponible desde{' '}
+                <strong>{attendanceWindow.startDate} a las {attendanceWindow.startTime || '00:00'}</strong>{' '}
+                hasta{' '}
+                <strong>{attendanceWindow.endDate} a las {attendanceWindow.endTime || '23:59'}</strong>
+              </p>
+            </div>
+          )}
+
+          {/* Save Button */}
+          <div className="mt-6">
+            <button
+              onClick={handleSaveAttendanceWindow}
+              disabled={savingAttendance}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-3 rounded-lg flex items-center gap-2 disabled:opacity-50"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {savingAttendance ? 'Guardando...' : 'Guardar Configuración de Asistencia'}
+            </button>
+          </div>
         </div>
       )}
 
