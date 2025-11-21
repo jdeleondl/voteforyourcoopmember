@@ -15,6 +15,7 @@ interface Candidate {
   memberId: string
   member: Member
   council: string
+  displayOrder: number
   bio: string | null
   photoUrl: string | null
   status: string
@@ -289,6 +290,9 @@ export default function CandidatesPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 text-white font-bold text-sm">
+                      {candidate.displayOrder}
+                    </span>
                     <h3 className="text-xl font-bold text-gray-900">{candidate.member.name}</h3>
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded-full ${

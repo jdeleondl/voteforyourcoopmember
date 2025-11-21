@@ -88,15 +88,16 @@ model PositionAssignment {
 
 // Candidatos propuestos para votación (se seleccionan de miembros presentes)
 model Candidate {
-  id          String    @id @default(uuid())
-  memberId    String
-  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  council     String    // Consejo: "administracion", "vigilancia", "credito"
-  bio         String?
-  photoUrl    String?
-  status      String    @default("active") // active, inactive
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  memberId     String
+  member       Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  council      String    // Consejo: "administracion", "vigilancia", "credito"
+  displayOrder Int       // Orden de visualización dentro del consejo (1, 2, 3...)
+  bio          String?
+  photoUrl     String?
+  status       String    @default("active") // active, inactive
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   votes       Vote[]
 

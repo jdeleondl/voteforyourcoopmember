@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: [
           { council: 'asc' },
-          { member: { name: 'asc' } },
+          { displayOrder: 'asc' },
         ],
       })
 
@@ -133,11 +133,20 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Calculate the next displayOrder for this council
+      const lastCandidate = await prisma.candidate.findFirst({
+        where: { council },
+        orderBy: { displayOrder: 'desc' },
+        select: { displayOrder: true },
+      })
+      const nextDisplayOrder = lastCandidate ? lastCandidate.displayOrder + 1 : 1
+
       // Create candidate
       const candidate = await prisma.candidate.create({
         data: {
           memberId,
           council,
+          displayOrder: nextDisplayOrder,
           bio: bio || null,
           photoUrl: photoUrl || null,
           status: 'active',
