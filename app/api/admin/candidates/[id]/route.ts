@@ -11,7 +11,7 @@ export async function PUT(
     try {
       const { id } = params
       const body = await request.json()
-      const { bio, photoUrl, status } = body
+      const { bio, photoUrl, status, council } = body
 
       // Check if candidate exists
       const existing = await prisma.candidate.findUnique({
@@ -39,11 +39,23 @@ export async function PUT(
         }
       }
 
-      // Build update data (can only update bio, photoUrl, status)
+      // Validate council if provided
+      if (council) {
+        const validCouncils = ['administracion', 'vigilancia', 'credito']
+        if (!validCouncils.includes(council)) {
+          return NextResponse.json(
+            { error: 'Consejo/Comité no válido' },
+            { status: 400 }
+          )
+        }
+      }
+
+      // Build update data (can only update bio, photoUrl, status, council)
       const updateData: any = {}
       if (bio !== undefined) updateData.bio = bio
       if (photoUrl !== undefined) updateData.photoUrl = photoUrl
       if (status !== undefined) updateData.status = status
+      if (council !== undefined) updateData.council = council
 
       // Update candidate
       const candidate = await prisma.candidate.update({
@@ -104,12 +116,11 @@ export async function DELETE(
         )
       }
 
-      // Check if candidate has votes
+      // Delete all votes for this candidate first
       if (candidate._count.votes > 0) {
-        return NextResponse.json(
-          { error: `No se puede eliminar. El candidato tiene ${candidate._count.votes} votos registrados.` },
-          { status: 400 }
-        )
+        await prisma.vote.deleteMany({
+          where: { candidateId: id },
+        })
       }
 
       // Delete candidate
@@ -123,7 +134,7 @@ export async function DELETE(
         'delete_candidate',
         'candidate',
         id,
-        { memberName: candidate.member.name, council: candidate.council },
+        { memberName: candidate.member.name, council: candidate.council, votesDeleted: candidate._count.votes },
         request
       )
 

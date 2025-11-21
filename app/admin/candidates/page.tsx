@@ -109,9 +109,9 @@ export default function CandidatesPage() {
 
       const method = editingCandidate ? 'PUT' : 'POST'
 
-      // For editing, only send bio, photoUrl, status (not memberId or council)
+      // For editing, only send bio, photoUrl, council (not memberId)
       const payload = editingCandidate
-        ? { bio: formData.bio, photoUrl: formData.photoUrl }
+        ? { bio: formData.bio, photoUrl: formData.photoUrl, council: formData.council }
         : formData
 
       const response = await fetch(url, {
@@ -137,12 +137,11 @@ export default function CandidatesPage() {
   }
 
   const handleDelete = async (id: string, memberName: string, voteCount: number) => {
-    if (voteCount > 0) {
-      alert(`No se puede eliminar a ${memberName} porque tiene ${voteCount} votos registrados.`)
-      return
-    }
+    const warningMsg = voteCount > 0
+      ? `¿Estás seguro de eliminar a ${memberName}? Este candidato tiene ${voteCount} voto(s) registrado(s) que también serán eliminados.`
+      : `¿Estás seguro de eliminar a ${memberName} como candidato?`
 
-    if (!confirm(`¿Estás seguro de eliminar a ${memberName} como candidato?`)) {
+    if (!confirm(warningMsg)) {
       return
     }
 
@@ -354,7 +353,6 @@ export default function CandidatesPage() {
               <button
                 onClick={() => handleDelete(candidate.id, candidate.member.name, candidate.voteCount)}
                 className="text-red-600 hover:text-red-700 font-medium text-sm flex items-center gap-1"
-                disabled={candidate.voteCount > 0}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -439,6 +437,25 @@ export default function CandidatesPage() {
                     disabled
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
                   />
+                </div>
+              )}
+
+              {/* Council Selection (when editing) */}
+              {editingCandidate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Consejo/Comité *
+                  </label>
+                  <select
+                    value={formData.council}
+                    onChange={(e) => setFormData({ ...formData, council: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="administracion">Consejo de Administración</option>
+                    <option value="vigilancia">Consejo de Vigilancia</option>
+                    <option value="credito">Comité de Crédito</option>
+                  </select>
                 </div>
               )}
 
