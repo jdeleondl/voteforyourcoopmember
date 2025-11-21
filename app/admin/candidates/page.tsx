@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import MemberSearchInput, { MemberSearchResult } from '@/app/components/MemberSearchInput'
 
 interface Member {
   id: string
@@ -24,12 +25,12 @@ interface Candidate {
 
 export default function CandidatesPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
-  const [availableMembers, setAvailableMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCouncil, setFilterCouncil] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null)
+  const [selectedMemberName, setSelectedMemberName] = useState('')
   const [formData, setFormData] = useState({
     memberId: '',
     council: 'administracion',
@@ -58,25 +59,6 @@ export default function CandidatesPage() {
     }
   }
 
-  const fetchAvailableMembers = async (council: string) => {
-    try {
-      // Fetch members with confirmed attendance
-      const response = await fetch('/api/admin/attendance?status=active')
-      const data = await response.json()
-
-      if (data.attendance) {
-        // Filter out members who already have active position assignments or are already candidates
-        const memberIds = data.attendance.map((a: any) => a.member.id)
-
-        // We'll validate on the backend, but for now just show all present members
-        const members = data.attendance.map((a: any) => a.member)
-        setAvailableMembers(members)
-      }
-    } catch (error) {
-      console.error('Error fetching available members:', error)
-    }
-  }
-
   const handleOpenModal = (candidate?: Candidate) => {
     if (candidate) {
       setEditingCandidate(candidate)
@@ -88,13 +70,13 @@ export default function CandidatesPage() {
       })
     } else {
       setEditingCandidate(null)
+      setSelectedMemberName('')
       setFormData({
         memberId: '',
         council: 'administracion',
         bio: '',
         photoUrl: '',
       })
-      fetchAvailableMembers('administracion')
     }
     setShowModal(true)
   }
@@ -102,18 +84,18 @@ export default function CandidatesPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingCandidate(null)
+    setSelectedMemberName('')
     setFormData({
       memberId: '',
       council: 'administracion',
       bio: '',
       photoUrl: '',
     })
-    setAvailableMembers([])
   }
 
-  const handleCouncilChange = (council: string) => {
-    setFormData({ ...formData, council, memberId: '' })
-    fetchAvailableMembers(council)
+  const handleMemberSelect = (member: MemberSearchResult) => {
+    setFormData({ ...formData, memberId: member.id })
+    setSelectedMemberName(member.name)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -415,7 +397,7 @@ export default function CandidatesPage() {
                   </label>
                   <select
                     value={formData.council}
-                    onChange={(e) => handleCouncilChange(e.target.value)}
+                    onChange={(e) => setFormData({ ...formData, council: e.target.value, memberId: '' })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     required
                   >
@@ -429,25 +411,19 @@ export default function CandidatesPage() {
               {/* Member Selection (only when creating) */}
               {!editingCandidate && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Miembro Presente *
-                  </label>
-                  <select
-                    value={formData.memberId}
-                    onChange={(e) => setFormData({ ...formData, memberId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Selecciona un miembro</option>
-                    {availableMembers.map((member) => (
-                      <option key={member.id} value={member.id}>
-                        {member.name} - {member.employeeId}
-                      </option>
-                    ))}
-                  </select>
+                  <MemberSearchInput
+                    label="Miembro Presente *"
+                    placeholder="Buscar por nombre o ID de empleado..."
+                    onSelect={handleMemberSelect}
+                    value={selectedMemberName}
+                    filterAttendance={true}
+                  />
                   <p className="text-sm text-gray-500 mt-1">
-                    Solo se muestran miembros con asistencia confirmada y sin cargos activos
+                    Solo se muestran miembros con asistencia confirmada
                   </p>
+                  {!formData.memberId && (
+                    <input type="text" required value={formData.memberId} style={{ display: 'none' }} />
+                  )}
                 </div>
               )}
 

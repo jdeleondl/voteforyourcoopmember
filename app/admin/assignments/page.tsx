@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import MemberSearchInput, { MemberSearchResult } from '@/app/components/MemberSearchInput'
 
 interface Member {
   id: string
@@ -30,11 +31,11 @@ interface Assignment {
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [positions, setPositions] = useState<Position[]>([])
-  const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCouncil, setFilterCouncil] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
+  const [selectedMemberName, setSelectedMemberName] = useState('')
   const [formData, setFormData] = useState({
     positionId: '',
     memberId: '',
@@ -46,7 +47,6 @@ export default function AssignmentsPage() {
   useEffect(() => {
     fetchAssignments()
     fetchPositions()
-    fetchMembers()
   }, [filterCouncil])
 
   const fetchAssignments = async () => {
@@ -74,16 +74,6 @@ export default function AssignmentsPage() {
     }
   }
 
-  const fetchMembers = async () => {
-    try {
-      const response = await fetch('/api/admin/members')
-      const data = await response.json()
-      setMembers(data.members || [])
-    } catch (error) {
-      console.error('Error fetching members:', error)
-    }
-  }
-
   const handleOpenModal = (assignment?: Assignment) => {
     if (assignment) {
       setEditingAssignment(assignment)
@@ -95,6 +85,7 @@ export default function AssignmentsPage() {
       })
     } else {
       setEditingAssignment(null)
+      setSelectedMemberName('')
       setFormData({
         positionId: '',
         memberId: '',
@@ -108,12 +99,18 @@ export default function AssignmentsPage() {
   const handleCloseModal = () => {
     setShowModal(false)
     setEditingAssignment(null)
+    setSelectedMemberName('')
     setFormData({
       positionId: '',
       memberId: '',
       termStartDate: '',
       termEndDate: '',
     })
+  }
+
+  const handleMemberSelect = (member: MemberSearchResult) => {
+    setFormData({ ...formData, memberId: member.id })
+    setSelectedMemberName(member.name)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -406,22 +403,16 @@ export default function AssignmentsPage() {
               {/* Member Selection (only when creating) */}
               {!editingAssignment && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Miembro *
-                  </label>
-                  <select
-                    value={formData.memberId}
-                    onChange={(e) => setFormData({ ...formData, memberId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Selecciona un miembro</option>
-                    {members.map((member) => (
-                      <option key={member.id} value={member.id}>
-                        {member.name} - {member.employeeId}
-                      </option>
-                    ))}
-                  </select>
+                  <MemberSearchInput
+                    label="Miembro *"
+                    placeholder="Buscar por nombre o ID de empleado..."
+                    onSelect={handleMemberSelect}
+                    value={selectedMemberName}
+                    filterAttendance={false}
+                  />
+                  {!formData.memberId && (
+                    <input type="text" required value={formData.memberId} style={{ display: 'none' }} />
+                  )}
                 </div>
               )}
 
