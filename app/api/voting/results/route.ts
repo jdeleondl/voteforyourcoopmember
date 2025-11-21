@@ -1,67 +1,92 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+const COUNCIL_LABELS: Record<string, string> = {
+  administracion: 'Consejo de Administración',
+  vigilancia: 'Consejo de Vigilancia',
+  credito: 'Comité de Crédito',
+}
+
+const COUNCIL_ORDER = ['administracion', 'credito', 'vigilancia']
+
 export async function GET() {
   try {
     // Obtener total de asistentes
-    const totalAttendees = await prisma.attendance.count()
+    const totalAttendees = await prisma.attendance.count({
+      where: { status: 'active' }
+    })
 
-    // Obtener todos los votos
-    const votes = await prisma.vote.findMany({
+    // Obtener todos los candidatos con sus votos y miembros
+    const candidates = await prisma.candidate.findMany({
+      where: { status: 'active' },
       include: {
-        candidate: true,
+        member: true,
+        _count: {
+          select: { votes: true }
+        }
       },
+      orderBy: [
+        { council: 'asc' },
+        { displayOrder: 'asc' }
+      ]
     })
 
-    // Contar votos únicos (miembros que votaron)
-    const uniqueVoters = new Set(votes.map(v => v.memberId))
-    const totalVotes = uniqueVoters.size
-
-    // Validar que el número de votos coincida con asistentes
-    const isValid = totalVotes === totalAttendees
-
-    // Agrupar votos por candidato
-    const candidateVotes: { [candidateId: string]: number } = {}
-    votes.forEach(vote => {
-      candidateVotes[vote.candidateId] = (candidateVotes[vote.candidateId] || 0) + 1
+    // Obtener todos los votos para contar votantes únicos por consejo
+    const allVotes = await prisma.vote.findMany({
+      include: {
+        candidate: true
+      }
     })
 
-    // Obtener todos los candidatos con sus votos
-    const candidates = await prisma.candidate.findMany()
+    // Contar votantes únicos totales
+    const uniqueVoters = new Set(allVotes.map(v => v.memberId))
+    const totalVoters = uniqueVoters.size
 
-    const candidateResults = candidates.map(candidate => ({
-      id: candidate.id,
-      name: candidate.name,
-      position: candidate.position,
-      council: candidate.council,
-      voteCount: candidateVotes[candidate.id] || 0,
-    }))
+    // Agrupar resultados por consejo
+    const resultsByCouncil: {
+      council: string
+      councilLabel: string
+      candidates: Array<{
+        candidateId: string
+        candidateName: string
+        displayOrder: number
+        council: string
+        voteCount: number
+      }>
+      totalVotes: number
+    }[] = []
 
-    // Agrupar resultados por consejo y posición
-    const grouped: {
-      [council: string]: {
-        [position: string]: typeof candidateResults
-      }
-    } = {}
+    // Procesar cada consejo en orden
+    for (const council of COUNCIL_ORDER) {
+      const councilCandidates = candidates.filter(c => c.council === council)
 
-    candidateResults.forEach(result => {
-      if (!grouped[result.council]) {
-        grouped[result.council] = {}
-      }
+      if (councilCandidates.length === 0) continue
 
-      const fullPosition = `${result.council}_${result.position}`
-      if (!grouped[result.council][fullPosition]) {
-        grouped[result.council][fullPosition] = []
-      }
+      // Contar votos totales para este consejo
+      const councilVotes = allVotes.filter(v => v.candidate.council === council)
+      const totalCouncilVotes = councilVotes.length
 
-      grouped[result.council][fullPosition].push(result)
-    })
+      resultsByCouncil.push({
+        council,
+        councilLabel: COUNCIL_LABELS[council] || council,
+        candidates: councilCandidates.map(c => ({
+          candidateId: c.id,
+          candidateName: c.member.name,
+          displayOrder: c.displayOrder,
+          council: c.council,
+          voteCount: c._count.votes
+        })).sort((a, b) => b.voteCount - a.voteCount), // Sort by votes descending
+        totalVotes: totalCouncilVotes
+      })
+    }
 
     return NextResponse.json({
-      totalVotes,
-      totalAttendees,
-      isValid,
-      candidateResults: grouped,
+      results: resultsByCouncil,
+      summary: {
+        totalAttendees,
+        totalVoters,
+        participationRate: totalAttendees > 0 ? (totalVoters / totalAttendees) * 100 : 0,
+      }
     })
   } catch (error) {
     console.error('Error fetching results:', error)
