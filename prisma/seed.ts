@@ -217,60 +217,72 @@ async function main() {
     {
       memberId: members[3].id, // Juan Pérez
       council: 'administracion',
+      displayOrder: 1,
       bio: 'Licenciado en Administración con 10 años de experiencia en cooperativas',
     },
     {
       memberId: members[4].id, // María González
       council: 'administracion',
+      displayOrder: 2,
       bio: 'MBA, especialista en gestión cooperativa',
     },
     {
       memberId: members[5].id, // Pedro Rodríguez
       council: 'administracion',
+      displayOrder: 3,
       bio: 'Contador público certificado',
     },
     {
       memberId: members[6].id, // Ana Martínez
       council: 'administracion',
+      displayOrder: 4,
       bio: 'Experta en documentación y actas institucionales',
     },
     {
       memberId: members[13].id, // Patricia Ramírez
       council: 'administracion',
+      displayOrder: 5,
     },
     // Consejo de Vigilancia
     {
       memberId: members[7].id, // Carlos Sánchez
       council: 'vigilancia',
+      displayOrder: 1,
       bio: 'Auditor certificado con 15 años de experiencia',
     },
     {
       memberId: members[8].id, // Laura Fernández
       council: 'vigilancia',
+      displayOrder: 2,
       bio: 'Contadora pública, especialista en auditoría',
     },
     {
       memberId: members[9].id, // Roberto López
       council: 'vigilancia',
+      displayOrder: 3,
     },
     {
       memberId: members[14].id, // Jorge Morales
       council: 'vigilancia',
+      displayOrder: 4,
     },
     // Comité de Crédito
     {
       memberId: members[10].id, // Carmen Díaz
       council: 'credito',
+      displayOrder: 1,
       bio: 'Economista con experiencia en análisis crediticio',
     },
     {
       memberId: members[11].id, // Sandra Cruz
       council: 'credito',
+      displayOrder: 2,
       bio: 'Especialista en gestión de riesgos financieros',
     },
     {
       memberId: members[12].id, // Alberto Gutiérrez
       council: 'credito',
+      displayOrder: 3,
     },
   ]
 
