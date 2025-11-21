@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       const data = attendances.map((att, index) => ({
         '#': index + 1,
         'Nombre': att.member.name,
-        'Cédula': att.member.cedula,
+        'ID Empleado': att.member.employeeId,
         'Email': att.member.email,
         'Teléfono': att.member.phone || 'N/A',
         'Código de Votación': att.code,

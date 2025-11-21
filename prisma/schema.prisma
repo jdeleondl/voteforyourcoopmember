@@ -27,14 +27,14 @@ model Admin {
 
 // Miembros de la cooperativa
 model Member {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  cedula    String   @unique
-  phone     String?
-  status    String   @default("active") // active, inactive, suspended
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  employeeId String   @unique // ID de empleado (8 dígitos)
+  phone      String?
+  status     String   @default("active") // active, inactive, suspended
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   attendance         Attendance?
   votes              Vote[]

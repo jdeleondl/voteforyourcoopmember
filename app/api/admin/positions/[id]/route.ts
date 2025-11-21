@@ -11,7 +11,7 @@ export async function PUT(
     try {
       const { id } = params
       const body = await request.json()
-      const { name, council, order, isOccupied, currentHolder, termEndDate } = body
+      const { name, council, order } = body
 
       // Check if position exists
       const existing = await prisma.position.findUnique({
@@ -25,16 +25,11 @@ export async function PUT(
         )
       }
 
-      // Build update data
+      // Build update data (solo name, council, order - la asignación se hace en /admin/assignments)
       const updateData: any = {}
       if (name !== undefined) updateData.name = name
       if (council !== undefined) updateData.council = council
       if (order !== undefined) updateData.order = order
-      if (isOccupied !== undefined) updateData.isOccupied = isOccupied
-      if (currentHolder !== undefined) updateData.currentHolder = currentHolder
-      if (termEndDate !== undefined) {
-        updateData.termEndDate = termEndDate ? new Date(termEndDate) : null
-      }
 
       // Update position
       const position = await prisma.position.update({
@@ -79,7 +74,7 @@ export async function DELETE(
         where: { id },
         include: {
           _count: {
-            select: { candidates: true },
+            select: { assignments: true },
           },
         },
       })
@@ -91,10 +86,10 @@ export async function DELETE(
         )
       }
 
-      // Check if position has candidates
-      if (position._count.candidates > 0) {
+      // Check if position has assignments
+      if (position._count.assignments > 0) {
         return NextResponse.json(
-          { error: `No se puede eliminar. Esta posición tiene ${position._count.candidates} candidatos registrados.` },
+          { error: `No se puede eliminar. Esta posición tiene ${position._count.assignments} asignaciones registradas.` },
           { status: 400 }
         )
       }

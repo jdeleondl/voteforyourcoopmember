@@ -23,7 +23,7 @@ export async function GET() {
     const attendees = attendances.map((attendance) => ({
       name: attendance.member.name,
       email: attendance.member.email,
-      cedula: attendance.member.cedula,
+      employeeId: attendance.member.employeeId,
       confirmedAt: attendance.confirmedAt.toISOString(),
     }))
 

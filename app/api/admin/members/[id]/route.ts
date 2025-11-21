@@ -11,17 +11,25 @@ export async function PUT(
   return withAuth(request, async (session) => {
     try {
       const body = await request.json()
-      const { name, email, cedula, phone, status } = body
+      const { name, email, employeeId, phone, status } = body
       const { id } = params
 
-      if (!name || !email || !cedula) {
+      if (!name || !email || !employeeId) {
         return NextResponse.json(
-          { error: 'Nombre, email y cédula son requeridos' },
+          { error: 'Nombre, email e ID de empleado son requeridos' },
           { status: 400 }
         )
       }
 
-      // Check if email or cedula already exists for another member
+      // Validate employeeId is 8 digits
+      if (!/^\d{8}$/.test(employeeId)) {
+        return NextResponse.json(
+          { error: 'El ID de empleado debe tener exactamente 8 dígitos' },
+          { status: 400 }
+        )
+      }
+
+      // Check if email or employeeId already exists for another member
       const existing = await prisma.member.findFirst({
         where: {
           AND: [
@@ -29,7 +37,7 @@ export async function PUT(
             {
               OR: [
                 { email },
-                { cedula },
+                { employeeId },
               ],
             },
           ],
@@ -38,7 +46,7 @@ export async function PUT(
 
       if (existing) {
         return NextResponse.json(
-          { error: 'Ya existe otro miembro con ese email o cédula' },
+          { error: 'Ya existe otro miembro con ese email o ID de empleado' },
           { status: 400 }
         )
       }
@@ -48,7 +56,7 @@ export async function PUT(
         data: {
           name,
           email,
-          cedula,
+          employeeId,
           phone: phone || null,
           status: status || 'active',
         },
@@ -59,7 +67,7 @@ export async function PUT(
         'update_member',
         'member',
         member.id,
-        { name, email, cedula, status },
+        { name, email, employeeId, status },
         request
       )
 

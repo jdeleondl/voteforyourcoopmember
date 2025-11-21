@@ -16,23 +16,21 @@ export async function GET(request: NextRequest) {
         where.council = council
       }
 
-      if (availableOnly) {
-        where.OR = [
-          { isOccupied: false },
-          {
-            AND: [
-              { isOccupied: true },
-              { termEndDate: { lte: new Date() } },
-            ],
-          },
-        ]
-      }
-
       const positions = await prisma.position.findMany({
         where,
         include: {
           _count: {
-            select: { candidates: true },
+            select: { assignments: true },
+          },
+          assignments: {
+            where: {
+              termEndDate: {
+                gte: new Date(), // Solo asignaciones activas
+              },
+            },
+            include: {
+              member: true,
+            },
           },
         },
         orderBy: [
@@ -41,7 +39,32 @@ export async function GET(request: NextRequest) {
         ],
       })
 
-      return NextResponse.json({ positions })
+      // Mapear con información de asignación activa
+      const positionsWithStatus = positions.map(position => {
+        const activeAssignment = position.assignments.length > 0 ? position.assignments[0] : null
+
+        return {
+          id: position.id,
+          name: position.name,
+          council: position.council,
+          order: position.order,
+          createdAt: position.createdAt,
+          updatedAt: position.updatedAt,
+          isOccupied: !!activeAssignment,
+          currentHolder: activeAssignment ? activeAssignment.member.name : null,
+          termEndDate: activeAssignment ? activeAssignment.termEndDate : null,
+          _count: {
+            assignments: position._count.assignments,
+          },
+        }
+      })
+
+      // Filtrar por disponibilidad si es necesario
+      const filteredPositions = availableOnly
+        ? positionsWithStatus.filter(p => !p.isOccupied || (p.termEndDate && new Date(p.termEndDate) <= new Date()))
+        : positionsWithStatus
+
+      return NextResponse.json({ positions: filteredPositions })
     } catch (error) {
       console.error('Error fetching positions:', error)
       return NextResponse.json(
@@ -56,7 +79,7 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (session) => {
     try {
       const body = await request.json()
-      const { name, council, order, isOccupied, currentHolder, termEndDate } = body
+      const { name, council, order } = body
 
       // Validations
       if (!name || !council || order === undefined) {
@@ -92,15 +115,12 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Create position
+      // Create position (solo name, council, order - la asignación se hace en /admin/assignments)
       const position = await prisma.position.create({
         data: {
           name,
           council,
           order,
-          isOccupied: isOccupied || false,
-          currentHolder: currentHolder || null,
-          termEndDate: termEndDate ? new Date(termEndDate) : null,
         },
       })
 

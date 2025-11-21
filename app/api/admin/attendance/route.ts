@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
           id: att.member.id,
           name: att.member.name,
           email: att.member.email,
-          cedula: att.member.cedula,
+          employeeId: att.member.employeeId,
           phone: att.member.phone,
         },
       }))

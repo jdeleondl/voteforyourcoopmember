@@ -7,7 +7,7 @@ interface Member {
   id: string
   name: string
   email: string
-  cedula: string
+  employeeId: string
   phone?: string
   status: string
   createdAt: string
@@ -41,7 +41,7 @@ export default function MembersPage() {
 
   const filteredMembers = members.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.cedula.includes(searchTerm) ||
+                         member.employeeId.includes(searchTerm) ||
                          member.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || member.status === statusFilter
     return matchesSearch && matchesStatus
@@ -138,7 +138,7 @@ export default function MembersPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Nombre, cédula o email..."
+              placeholder="Nombre, ID de empleado o email..."
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -190,7 +190,7 @@ export default function MembersPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                      <div className="text-sm text-gray-500">{member.cedula}</div>
+                      <div className="text-sm text-gray-500">ID: {member.employeeId}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -293,7 +293,7 @@ function MemberModal({
   const [formData, setFormData] = useState({
     name: member?.name || '',
     email: member?.email || '',
-    cedula: member?.cedula || '',
+    employeeId: member?.employeeId || '',
     phone: member?.phone || '',
     status: member?.status || 'active',
   })
@@ -363,16 +363,19 @@ function MemberModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cédula *
+                  ID de Empleado *
                 </label>
                 <input
                   type="text"
-                  value={formData.cedula}
-                  onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
+                  value={formData.employeeId}
+                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
                   required
-                  placeholder="001-1234567-8"
+                  placeholder="12345678"
+                  maxLength={8}
+                  pattern="\d{8}"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">Debe tener exactamente 8 dígitos</p>
               </div>
 
               <div>

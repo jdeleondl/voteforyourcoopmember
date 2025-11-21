@@ -7,7 +7,7 @@ interface Member {
   id: string
   name: string
   email: string
-  cedula: string
+  employeeId: string
   hasConfirmed: boolean
 }
 
@@ -229,7 +229,7 @@ export default function AsistenciaPage() {
           {/* Buscador con Autocompletado */}
           <div className="mb-6" ref={searchRef}>
             <label className="block text-gray-700 font-bold mb-2">
-              Buscar por Nombre o Cédula
+              Buscar por Nombre o ID de Empleado
             </label>
             <div className="relative">
               <div className="flex items-center">
@@ -243,7 +243,7 @@ export default function AsistenciaPage() {
                         setShowSuggestions(true)
                       }
                     }}
-                    placeholder="Escribe tu nombre o cédula..."
+                    placeholder="Escribe tu nombre o ID de empleado..."
                     className="w-full px-4 py-3 pr-10 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none text-gray-800"
                     disabled={loading}
                   />
@@ -271,7 +271,7 @@ export default function AsistenciaPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <p className="font-bold text-gray-800">{member.name}</p>
-                            <p className="text-sm text-gray-600">Cédula: {member.cedula}</p>
+                            <p className="text-sm text-gray-600">ID: {member.employeeId}</p>
                             <p className="text-xs text-gray-500">{member.email}</p>
                           </div>
                           <div>
@@ -303,7 +303,7 @@ export default function AsistenciaPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <p className="font-semibold">No se encontraron resultados</p>
-                    <p className="text-sm">Intenta con otro nombre o cédula</p>
+                    <p className="text-sm">Intenta con otro nombre o ID de empleado</p>
                   </div>
                 </div>
               )}
@@ -322,7 +322,7 @@ export default function AsistenciaPage() {
                 <div>
                   <p className="text-sm text-indigo-600 font-semibold">Miembro Seleccionado:</p>
                   <p className="text-xl font-bold text-indigo-900">{selectedMember.name}</p>
-                  <p className="text-sm text-gray-600">Cédula: {selectedMember.cedula}</p>
+                  <p className="text-sm text-gray-600">ID: {selectedMember.employeeId}</p>
                   <p className="text-sm text-gray-600">{selectedMember.email}</p>
                 </div>
                 <button
@@ -388,7 +388,7 @@ export default function AsistenciaPage() {
           <ol className="space-y-2 text-gray-700">
             <li className="flex items-start gap-2">
               <span className="font-bold text-indigo-600">1.</span>
-              <span>Escribe tu nombre o cédula en el buscador</span>
+              <span>Escribe tu nombre o ID de empleado en el buscador</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-indigo-600">2.</span>
